@@ -9,6 +9,7 @@ mod arg_parsing;
 mod eth_test_parsing;
 mod eth_tests_fetching;
 mod stale_test_scanning;
+mod utils;
 
 pub(crate) struct ProgState {
     forced_regen: bool,
@@ -33,10 +34,9 @@ async fn main() -> anyhow::Result<()> {
 async fn run(state: ProgState) -> anyhow::Result<()> {
     match state.forced_regen {
         false => {
-            let repo = update_eth_tests_upstream()
-                .with_context(|| "Updating the Ethereum test repository")?;
+            update_eth_tests_upstream().with_context(|| "Updating the Ethereum test repository")?;
 
-            let tests_needing_reparse = determine_which_tests_need_reparsing(&repo)
+            let tests_needing_reparse = determine_which_tests_need_reparsing()
                 .await
                 .with_context(|| "Determining which Ethereum tests are stale")?;
 

@@ -1,30 +1,29 @@
-use anyhow::bail;
-use git2::{ErrorCode, Repository};
+use std::{path::Path, process::Command};
+
+use crate::utils::run_cmd;
 
 const ETH_TESTS_REPO_PATH: &str = "eth_tests";
+const ETH_TESTS_REPO_URL: &str = "https://github.com/ethereum/tests.git";
 
-pub(crate) fn update_eth_tests_upstream() -> anyhow::Result<Repository> {
-    let repo = match Repository::open(ETH_TESTS_REPO_PATH) {
-        Ok(repo) => repo,
-        Err(err) => match err.code() {
-            ErrorCode::NotFound => clone_eth_test_repo(),
-            _ => bail!(
-                "Error when attempting to open an existing eth test repo: {}",
-                err
-            ),
-        },
-    };
+pub(crate) fn update_eth_tests_upstream() -> anyhow::Result<()> {
+    if !eth_test_repo_exists() {
+        clone_eth_test_repo()?;
+    }
 
     // Repo already exists. Try pulling to see if there are any new changes.
-    pull_repo();
+    pull_repo()?;
 
-    Ok(repo)
+    Ok(())
 }
 
-fn clone_eth_test_repo() -> Repository {
-    todo!()
+fn eth_test_repo_exists() -> bool {
+    Path::new(&format!("{}/.git", ETH_TESTS_REPO_PATH)).exists()
 }
 
-fn pull_repo() {
-    todo!()
+fn clone_eth_test_repo() -> anyhow::Result<()> {
+    run_cmd(Command::new("git").args(["clone", ETH_TESTS_REPO_URL]))
+}
+
+fn pull_repo() -> anyhow::Result<()> {
+    run_cmd(Command::new("git").args(["-C", ETH_TESTS_REPO_PATH, "pull"]))
 }
