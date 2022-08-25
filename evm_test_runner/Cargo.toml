@@ -1,0 +1,10 @@
+[package]
+name = "evm_test_runner"
+description = "Test runner for Polygon Zero's EVM."
+version = "0.1.0"
+authors = ["Polygon Zero <bgluth@polygon.technology>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]

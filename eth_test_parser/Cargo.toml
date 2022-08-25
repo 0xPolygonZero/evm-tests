@@ -1,0 +1,10 @@
+[package]
+name = "eth_test_parser"
+description = "Downloads and parses common Ethereum tests into a format runnable by Polygon Zero's EVM."
+version = "0.1.0"
+authors = ["Polygon Zero <bgluth@polygon.technology>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]

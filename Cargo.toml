@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "eth_test_parser",
+    "evm_test_runner",
+    "common",
+]
