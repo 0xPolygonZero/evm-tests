@@ -25,7 +25,7 @@ impl ProgState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let p_args = ProgArgs::try_parse().with_context(|| "Parsing program arguments")?;
+    let p_args = ProgArgs::parse();
     let state = ProgState::new(p_args);
 
     run(state).await
