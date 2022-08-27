@@ -43,6 +43,8 @@ async fn run(state: ProgState) -> anyhow::Result<()> {
                 .await
                 .with_context(|| "Determining which Ethereum tests are stale")?;
 
+            // TODO: Handle tests sub-dirs that have been removed...
+
             parse_test_directories(tests_needing_reparse)
                 .await
                 .with_context(|| parse_err_context_msg("Reparsing stale tests"))?;

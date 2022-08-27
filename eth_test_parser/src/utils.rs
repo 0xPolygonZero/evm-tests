@@ -1,4 +1,8 @@
-use std::process::{Command, Output};
+use std::{
+    fs::{self, File},
+    path::{Path, PathBuf},
+    process::{Command, Output},
+};
 
 use anyhow::{bail, Context};
 
@@ -36,4 +40,18 @@ fn executing_cmd_ctx_str(cmd: &Command) -> String {
 
 pub(crate) fn check_that_required_tools_are_installed() -> anyhow::Result<()> {
     todo!()
+}
+
+pub fn get_entries_of_dir(dir_path: &Path) -> impl Iterator<Item = PathBuf> {
+    fs::read_dir(dir_path)
+        .unwrap_or_else(|_| panic!("Failed to read files in the directory {:?}", dir_path))
+        .map(|entry| {
+            entry
+                .expect("Error when getting DirEntry from fs::read_dir")
+                .path()
+        })
+}
+
+pub fn open_file_expected(path: &Path) -> File {
+    File::open(&path).unwrap_or_else(|_| panic!("Errored on opening an expected file: {:?}", path))
 }
