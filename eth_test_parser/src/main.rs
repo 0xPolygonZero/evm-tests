@@ -1,14 +1,16 @@
 use anyhow::Context;
 use arg_parsing::ProgArgs;
 use clap::Parser;
+use common::utils::init_env_logger;
 use eth_test_parsing::{parse_test_directories, parse_test_directories_forced};
 use eth_tests_fetching::update_eth_tests_upstream;
-use stale_test_scanning::determine_which_tests_need_reparsing;
+use stale_test_scanning::determine_which_test_dirs_need_reparsing;
 
 mod arg_parsing;
 mod eth_test_parsing;
 mod eth_tests_fetching;
 mod stale_test_scanning;
+mod types;
 mod utils;
 
 pub(crate) struct ProgState {
@@ -25,6 +27,7 @@ impl ProgState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    init_env_logger();
     let p_args = ProgArgs::parse();
     let state = ProgState::new(p_args);
 
@@ -36,7 +39,7 @@ async fn run(state: ProgState) -> anyhow::Result<()> {
         false => {
             update_eth_tests_upstream().with_context(|| "Updating the Ethereum test repository")?;
 
-            let tests_needing_reparse = determine_which_tests_need_reparsing()
+            let tests_needing_reparse = determine_which_test_dirs_need_reparsing()
                 .await
                 .with_context(|| "Determining which Ethereum tests are stale")?;
 
