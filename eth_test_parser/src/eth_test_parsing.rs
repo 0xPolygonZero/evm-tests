@@ -13,7 +13,7 @@ use serde_json::Value;
 use crate::{
     stale_test_scanning::get_latest_commit_date_of_dir_from_git,
     types::{ETH_TESTS_REPO_PATH, SUB_TEST_DIR_LAST_CHANGED_FILE_NAME},
-    utils::{get_entries_of_dir, get_parsed_test_path_for_eth_test_path, open_file_expected},
+    utils::{get_entries_of_dir, get_parsed_test_path_for_eth_test_path, open_file_with_context},
 };
 
 type JsonFieldWhiteList = HashSet<&'static str>;
@@ -67,7 +67,7 @@ fn parse_test_dir(eth_test_repo_test_sub_dir: &Path) -> anyhow::Result<()> {
     {
         debug!("Parsing test {:?}", f_path);
 
-        let test_json = serde_json::from_reader(BufReader::new(open_file_expected(&f_path)))
+        let test_json = serde_json::from_reader(BufReader::new(open_file_with_context(&f_path)?))
             .with_context(|| format!("Parsing the eth test {:?}", f_path))?;
         parse_eth_test(test_json, &parsed_test_sub_dir, &whitelist);
     }

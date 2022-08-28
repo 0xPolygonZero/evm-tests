@@ -55,8 +55,8 @@ pub fn get_entries_of_dir(dir_path: &Path) -> impl Iterator<Item = PathBuf> {
         })
 }
 
-pub fn open_file_expected(path: &Path) -> File {
-    File::open(&path).unwrap_or_else(|_| panic!("Errored on opening an expected file: {:?}", path))
+pub fn open_file_with_context(path: &Path) -> anyhow::Result<File> {
+    File::open(&path).with_context(|| format!("Errored on opening an expected file: {:?}", path))
 }
 
 pub fn get_parsed_test_path_for_eth_test_path(eth_test_path: &Path) -> PathBuf {
