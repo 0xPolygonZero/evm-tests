@@ -16,7 +16,7 @@ use crate::{
 
 const TEST_GROUPS: [&str; 1] = ["GeneralStateTests"];
 
-pub(crate) async fn determine_which_test_dirs_need_reparsing() -> anyhow::Result<Vec<PathBuf>> {
+pub(crate) fn determine_which_test_dirs_need_reparsing() -> anyhow::Result<Vec<PathBuf>> {
     let mut test_subgroup_dirs_needing_reparse = Vec::new();
 
     for entry in fs::read_dir(ETH_TESTS_REPO_PATH)
@@ -60,10 +60,7 @@ fn get_group_sub_test_dirs_that_have_changed_upstream(
         )
     })? {
         let entry = entry?;
-        let dir_name = get_file_name_from_fs_entry(&entry);
-
-        let mut sub_group_path = test_group.clone();
-        sub_group_path.push(&dir_name);
+        let sub_group_path = entry.path();
 
         let dir_last_parse_commit_date_time =
             get_last_commit_datetime_used_by_last_parse_for_sub_test_dir(&entry.path());
@@ -71,15 +68,15 @@ fn get_group_sub_test_dirs_that_have_changed_upstream(
         let dir_last_commit_date_time = get_latest_commit_date_of_dir_from_git(&entry.path())?;
         if dir_last_parse_commit_date_time == Some(dir_last_commit_date_time) {
             debug!(
-                "Skipping parsing of test sub directory {} because it's already up to date...",
-                dir_name
+                "Skipping parsing of test sub directory {:?} because it's already up to date...",
+                &sub_group_path
             );
             continue;
         }
 
         debug!(
             "Reparsing the test sub-directory {:?} as it has been changed upstream...",
-            sub_group_path
+            &sub_group_path
         );
         test_subgroup_dirs_needing_reparse.push(sub_group_path);
     }
@@ -107,7 +104,7 @@ fn get_last_commit_datetime_used_by_last_parse_for_sub_test_dir(
     ))
 }
 
-fn get_latest_commit_date_of_dir_from_git(dir: &Path) -> anyhow::Result<DateTime> {
+pub(crate) fn get_latest_commit_date_of_dir_from_git(dir: &Path) -> anyhow::Result<DateTime> {
     // Since we are not using `cd`, we have to not include the repo root in the
     // path.
     let dir_without_repo = dir

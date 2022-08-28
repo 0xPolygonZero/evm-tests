@@ -4,3 +4,5 @@
 *.iml
 .idea/
 .vscode
+
+parsed_tests

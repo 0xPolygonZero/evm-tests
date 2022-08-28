@@ -40,7 +40,6 @@ async fn run(state: ProgState) -> anyhow::Result<()> {
             update_eth_tests_upstream().with_context(|| "Updating the Ethereum test repository")?;
 
             let tests_needing_reparse = determine_which_test_dirs_need_reparsing()
-                .await
                 .with_context(|| "Determining which Ethereum tests are stale")?;
 
             // TODO: Handle tests sub-dirs that have been removed...
