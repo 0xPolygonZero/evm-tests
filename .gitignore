@@ -5,4 +5,5 @@
 .idea/
 .vscode
 
-parsed_tests
+parsed_tests/
+eth_tests/
