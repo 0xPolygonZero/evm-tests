@@ -9,6 +9,7 @@ use stale_test_scanning::determine_which_test_dirs_need_reparsing;
 mod arg_parsing;
 mod eth_test_parsing;
 mod eth_tests_fetching;
+mod json_parsing;
 mod stale_test_scanning;
 mod types;
 mod utils;

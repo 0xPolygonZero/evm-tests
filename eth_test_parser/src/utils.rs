@@ -1,11 +1,13 @@
 use std::{
     fs::{self, File},
+    ops::BitAnd,
     path::{Path, PathBuf},
     process::{Command, Output},
 };
 
 use anyhow::{bail, Context};
 use common::types::PARSED_TESTS_PATH;
+use num_traits::PrimInt;
 
 use crate::types::ETH_TESTS_REPO_PATH;
 
@@ -56,7 +58,7 @@ pub fn get_entries_of_dir(dir_path: &Path) -> impl Iterator<Item = PathBuf> {
 }
 
 pub fn open_file_with_context(path: &Path) -> anyhow::Result<File> {
-    File::open(&path).with_context(|| format!("Errored on opening an expected file: {:?}", path))
+    File::open(path).with_context(|| format!("Errored on opening an expected file: {:?}", path))
 }
 
 pub fn get_parsed_test_path_for_eth_test_path(eth_test_path: &Path) -> PathBuf {
@@ -65,4 +67,8 @@ pub fn get_parsed_test_path_for_eth_test_path(eth_test_path: &Path) -> PathBuf {
     parsed_path.push(eth_test_path.strip_prefix(ETH_TESTS_REPO_PATH).unwrap());
 
     parsed_path
+}
+
+pub fn is_even<T: PrimInt + BitAnd<Output = T>>(num: T) -> bool {
+    (num & T::one()) == T::zero()
 }
