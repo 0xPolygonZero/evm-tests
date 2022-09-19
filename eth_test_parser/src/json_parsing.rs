@@ -1,3 +1,6 @@
+//! Logic for parsing the extracted raw test JSON into a format that is usable
+//! by `Plonky2`.
+
 use std::{any::type_name, collections::HashMap, error::Error, str::FromStr};
 
 use anyhow::Context;
@@ -5,26 +8,46 @@ use eth_trie_utils::{
     partial_trie::{Nibbles, PartialTrie},
     trie_builder::InsertEntry,
 };
-use ethereum_types::U256;
+use ethereum_types::{Address, U256};
+use plonky2_evm::proof::BlockMetadata;
 use serde_json::Value;
 use sha3::{digest::core_api::CoreWrapper, Digest, Sha3_256, Sha3_256Core};
+
+use crate::utils::keccak_eth_addr;
 
 type Nonce = u32;
 type HashType = U256; // Placeholder
 
-pub(crate) type EthAddress = U256;
-
 type Sha3256Hasher = CoreWrapper<Sha3_256Core>;
 
-pub(crate) struct JsonAccountsParseOutput {
-    account_trie: Box<PartialTrie>,
-    account_storage_tries: HashMap<EthAddress, Box<PartialTrie>>,
-    code_for_contracts: HashMap<EthAddress, Vec<u8>>,
+#[derive(Debug)]
+pub(crate) struct ParsedJsonOutput {
+    accounts: JsonAccountsParseOutput,
+    receipts: JsonReceiptsParseOutput,
+    txns: JsonTxnParseOutput,
 }
 
-pub(crate) fn accounts_from_json(accounts_json: &Value) -> anyhow::Result<JsonAccountsParseOutput> {
+#[derive(Debug)]
+pub(crate) struct JsonAccountsParseOutput {
+    pub(crate) account_trie: PartialTrie,
+    pub(crate) account_storage_tries: Vec<(Address, PartialTrie)>,
+    pub(crate) code_for_contracts: HashMap<U256, Vec<u8>>,
+}
+
+#[derive(Debug)]
+pub(crate) struct JsonReceiptsParseOutput {}
+
+#[derive(Debug)]
+pub(crate) struct JsonTxnParseOutput {
+    pub(crate) txn_trie: PartialTrie,
+    pub(crate) signed_txns: Vec<Vec<u8>>,
+}
+
+pub(crate) fn parse_initial_account_state_from_json(
+    accounts_json: &Value,
+) -> anyhow::Result<JsonAccountsParseOutput> {
     let mut account_trie = Box::new(PartialTrie::Empty);
-    let mut account_storage_tries = HashMap::new();
+    let mut account_storage_tries = Vec::new();
     let mut code_for_contracts = HashMap::new();
 
     for (addr, v) in json_val_to_addresses_and_sub_json_vals(accounts_json) {
@@ -36,22 +59,22 @@ pub(crate) fn accounts_from_json(accounts_json: &Value) -> anyhow::Result<JsonAc
             account_trie = updated_account_trie;
         }
 
-        account_storage_tries.insert(addr, acc_storage_trie);
+        account_storage_tries.push((addr, *acc_storage_trie));
 
         if let Some(contract_code) = contract_code_opt {
-            code_for_contracts.insert(addr, contract_code);
+            code_for_contracts.insert(keccak_eth_addr(addr), contract_code);
         }
     }
 
     Ok(JsonAccountsParseOutput {
-        account_trie,
+        account_trie: *account_trie,
         account_storage_tries,
         code_for_contracts,
     })
 }
 
 fn parse_json_account_entry(
-    account_addr: EthAddress,
+    account_addr: Address,
     account_json: &Value,
 ) -> anyhow::Result<(InsertEntry, Box<PartialTrie>, Option<Vec<u8>>)> {
     let balance: U256 = get_json_field_and_conv(account_json, "balance")?;
@@ -79,7 +102,7 @@ fn parse_json_account_entry(
     append_u256_to_byte_buf(code_hash, &mut trie_entry_bytes);
 
     let entry = InsertEntry {
-        nibbles: account_addr.into(),
+        nibbles: keccak_eth_addr(account_addr).into(),
         v: trie_entry_bytes,
     };
 
@@ -89,6 +112,21 @@ fn parse_json_account_entry(
     };
 
     Ok((entry, acc_storage_trie, contract_code_opt))
+}
+
+pub(crate) fn parse_receipt_trie_from_json(_receipt_json: &Value) -> PartialTrie {
+    todo!()
+}
+
+pub(crate) fn parse_txn_trie_from_json(_blocks_json: &Value) -> JsonTxnParseOutput {
+    todo!()
+}
+
+pub(crate) fn parse_block_metadata_from_json(
+    _blocks_json: &Value,
+    _genesis_block_header_json: &Value,
+) -> BlockMetadata {
+    todo!()
 }
 
 fn get_json_field_as_str<'a>(json: &'a Value, k: &'static str) -> anyhow::Result<&'a str> {
@@ -164,11 +202,11 @@ fn get_hash_of_bytes(bytes: &Vec<u8>) -> HashType {
 
 fn json_val_to_addresses_and_sub_json_vals(
     json_val: &Value,
-) -> impl Iterator<Item = (EthAddress, &Value)> {
+) -> impl Iterator<Item = (Address, &Value)> {
     json_val.as_object().into_iter().flatten().map(|(k, v)| {
-        let addr: U256 = k
+        let addr = k
             .parse()
-            .with_context(|| format!("Parsing {} to an Ethereum Address (H160)", k))
+            .with_context(|| format!("Parsing {} to an eth address (H160)", k))
             .unwrap();
         (addr, v)
     })
@@ -178,7 +216,7 @@ fn try_create_insert_entry_from_json_entry(
     k_str: &str,
     json_val: &Value,
 ) -> anyhow::Result<InsertEntry> {
-    let k: EthAddress = k_str
+    let k = k_str
         .parse()
         .with_context(|| format!("Parsing trie key {} into a U256", k_str))?;
 

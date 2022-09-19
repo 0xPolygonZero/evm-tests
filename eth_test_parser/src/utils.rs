@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::{bail, Context};
 use common::types::PARSED_TESTS_PATH;
+use ethereum_types::{Address, U256};
 use num_traits::PrimInt;
 
 use crate::types::ETH_TESTS_REPO_PATH;
@@ -47,7 +48,7 @@ pub(crate) fn check_that_required_tools_are_installed() -> anyhow::Result<()> {
     todo!()
 }
 
-pub fn get_entries_of_dir(dir_path: &Path) -> impl Iterator<Item = PathBuf> {
+pub(crate) fn get_entries_of_dir(dir_path: &Path) -> impl Iterator<Item = PathBuf> {
     fs::read_dir(dir_path)
         .unwrap_or_else(|_| panic!("Failed to read files in the directory {:?}", dir_path))
         .map(|entry| {
@@ -57,11 +58,12 @@ pub fn get_entries_of_dir(dir_path: &Path) -> impl Iterator<Item = PathBuf> {
         })
 }
 
-pub fn open_file_with_context(path: &Path) -> anyhow::Result<File> {
+pub(crate) fn open_file_with_context(path: &Path) -> anyhow::Result<File> {
     File::open(path).with_context(|| format!("Errored on opening an expected file: {:?}", path))
 }
 
-pub fn get_parsed_test_path_for_eth_test_path(eth_test_path: &Path) -> PathBuf {
+/// Get the parsed output path for a given test input.
+pub(crate) fn get_parsed_test_path_for_eth_test_path(eth_test_path: &Path) -> PathBuf {
     let mut parsed_path = PathBuf::new();
     parsed_path.push(PARSED_TESTS_PATH);
     parsed_path.push(eth_test_path.strip_prefix(ETH_TESTS_REPO_PATH).unwrap());
@@ -69,6 +71,11 @@ pub fn get_parsed_test_path_for_eth_test_path(eth_test_path: &Path) -> PathBuf {
     parsed_path
 }
 
-pub fn is_even<T: PrimInt + BitAnd<Output = T>>(num: T) -> bool {
+pub(crate) fn is_even<T: PrimInt + BitAnd<Output = T>>(num: T) -> bool {
     (num & T::one()) == T::zero()
+}
+
+/// Run keccak256 on a Ethereum address to get a U256 hash.
+pub(crate) fn keccak_eth_addr(_addr: Address) -> U256 {
+    todo!()
 }

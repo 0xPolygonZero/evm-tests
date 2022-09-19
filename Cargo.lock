@@ -327,7 +327,7 @@ dependencies = [
 [[package]]
 name = "eth-trie-utils"
 version = "0.1.0"
-source = "git+https://github.com/mir-protocol/eth-trie-utils.git?rev=3deff443dc62e936d2522f98fc1db41c67ccb86e#3deff443dc62e936d2522f98fc1db41c67ccb86e"
+source = "git+https://github.com/mir-protocol/eth-trie-utils.git?rev=3ca443fd18e3f6d209dd96cbad851e05ae058b34#3ca443fd18e3f6d209dd96cbad851e05ae058b34"
 dependencies = [
  "anyhow",
  "ethereum-types",
@@ -335,6 +335,7 @@ dependencies = [
  "itertools",
  "log",
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -618,7 +619,7 @@ dependencies = [
 [[package]]
 name = "maybe_rayon"
 version = "0.1.0"
-source = "git+https://github.com/mir-protocol/plonky2.git?rev=c874fc54888b99de360ecd6661d7e3c7f961075c#c874fc54888b99de360ecd6661d7e3c7f961075c"
+source = "git+https://github.com/mir-protocol/plonky2.git?rev=928e8bc0e90507b5aeee2900a266bfc02dadb05b#928e8bc0e90507b5aeee2900a266bfc02dadb05b"
 dependencies = [
  "rayon",
 ]
@@ -835,7 +836,7 @@ checksum = "e0a7ae3ac2f1173085d398531c705756c94a4c56843785df85a60c1a0afac116"
 [[package]]
 name = "plonky2"
 version = "0.1.0"
-source = "git+https://github.com/mir-protocol/plonky2.git?rev=c874fc54888b99de360ecd6661d7e3c7f961075c#c874fc54888b99de360ecd6661d7e3c7f961075c"
+source = "git+https://github.com/mir-protocol/plonky2.git?rev=928e8bc0e90507b5aeee2900a266bfc02dadb05b#928e8bc0e90507b5aeee2900a266bfc02dadb05b"
 dependencies = [
  "anyhow",
  "itertools",
@@ -846,7 +847,6 @@ dependencies = [
  "plonky2_field",
  "plonky2_util",
  "rand",
- "rand_chacha",
  "serde",
  "serde_cbor",
  "static_assertions",
@@ -856,10 +856,11 @@ dependencies = [
 [[package]]
 name = "plonky2_evm"
 version = "0.1.0"
-source = "git+https://github.com/mir-protocol/plonky2.git?rev=c874fc54888b99de360ecd6661d7e3c7f961075c#c874fc54888b99de360ecd6661d7e3c7f961075c"
+source = "git+https://github.com/mir-protocol/plonky2.git?rev=928e8bc0e90507b5aeee2900a266bfc02dadb05b#928e8bc0e90507b5aeee2900a266bfc02dadb05b"
 dependencies = [
  "anyhow",
  "env_logger 0.9.0",
+ "eth-trie-utils",
  "ethereum-types",
  "hex-literal",
  "itertools",
@@ -874,13 +875,14 @@ dependencies = [
  "rand",
  "rand_chacha",
  "rlp",
+ "serde",
  "tiny-keccak",
 ]
 
 [[package]]
 name = "plonky2_field"
 version = "0.1.0"
-source = "git+https://github.com/mir-protocol/plonky2.git?rev=c874fc54888b99de360ecd6661d7e3c7f961075c#c874fc54888b99de360ecd6661d7e3c7f961075c"
+source = "git+https://github.com/mir-protocol/plonky2.git?rev=928e8bc0e90507b5aeee2900a266bfc02dadb05b#928e8bc0e90507b5aeee2900a266bfc02dadb05b"
 dependencies = [
  "anyhow",
  "itertools",
@@ -895,7 +897,7 @@ dependencies = [
 [[package]]
 name = "plonky2_util"
 version = "0.1.0"
-source = "git+https://github.com/mir-protocol/plonky2.git?rev=c874fc54888b99de360ecd6661d7e3c7f961075c#c874fc54888b99de360ecd6661d7e3c7f961075c"
+source = "git+https://github.com/mir-protocol/plonky2.git?rev=928e8bc0e90507b5aeee2900a266bfc02dadb05b#928e8bc0e90507b5aeee2900a266bfc02dadb05b"
 
 [[package]]
 name = "ppv-lite86"

@@ -1,3 +1,13 @@
+//! High level logic for parsing an full node test into a `PartialTrie` format
+//! usable by `Plonky2`.
+//!
+//! The general flow of parsing is as follows:
+//! - Read in the raw full node test and extract the JSON fields we care about.
+//! - Pass each extracted piece of JSON into the corresponding `parse` function
+//!   in `json_parsing`.
+//! - Move the parsed JSON into `Plonky2`'s `GenerationInputs` and serialize
+//!   this to file in the parsed test directory.
+
 use std::{
     collections::{HashMap, HashSet},
     fs::{self, create_dir_all},
@@ -6,15 +16,17 @@ use std::{
 };
 
 use anyhow::Context;
-use common::types::PARSED_TESTS_PATH;
 use log::{debug, info};
 use plonky2_evm::generation::GenerationInputs;
 use serde_json::Value;
 
 use crate::{
-    json_parsing::accounts_from_json,
+    json_parsing::{
+        parse_block_metadata_from_json, parse_initial_account_state_from_json,
+        parse_receipt_trie_from_json, parse_txn_trie_from_json,
+    },
     stale_test_scanning::get_latest_commit_date_of_dir_from_git,
-    types::{ETH_TESTS_REPO_PATH, SUB_TEST_DIR_LAST_CHANGED_FILE_NAME},
+    types::SUB_TEST_DIR_LAST_CHANGED_FILE_NAME,
     utils::{get_entries_of_dir, get_parsed_test_path_for_eth_test_path, open_file_with_context},
 };
 
@@ -23,25 +35,23 @@ type ExtractedWhitelistedJson = HashMap<String, Value>;
 
 const BERLIN_JSON_FIELD: &str = "berlin";
 const ACCOUNTS_JSON_FIELD: &str = "pre";
-const TXNS_JSON_FIELD: &str = "transactions";
+const RECEIPTS_JSON_FIELD: &str = "receiptTrie"; // Likely incorrect...
+const BLOCKS_JSON_FIELD: &str = "blocks";
+const GENESIS_BLOCK_JSON_FIELD: &str = "genesisBlockHeader";
 
-/// All inputs needed for feeding tests into the VM.
-struct ParsedTest {
-    evm_gen_inputs: GenerationInputs,
-}
-
+// TODO: Actually make async once it works (if needed)...
 pub(crate) async fn parse_test_directories(
     test_dirs_needing_reparse: Vec<PathBuf>,
 ) -> anyhow::Result<()> {
     for dir in test_dirs_needing_reparse {
-        parse_test_directory(&dir)
+        prep_and_parse_test_directory(&dir)
             .with_context(|| format!("Parsing the sub test directory {:?}", dir))?;
     }
 
     Ok(())
 }
 
-fn parse_test_directory(dir: &Path) -> anyhow::Result<()> {
+fn prep_and_parse_test_directory(dir: &Path) -> anyhow::Result<()> {
     let parsed_test_dir = get_parsed_test_path_for_eth_test_path(dir);
 
     create_dir_all(&parsed_test_dir).with_context(|| {
@@ -50,7 +60,8 @@ fn parse_test_directory(dir: &Path) -> anyhow::Result<()> {
             &parsed_test_dir
         )
     })?;
-    parse_test_dir(dir).with_context(|| "Parsing the test directory")?;
+
+    parse_test_directory(dir).with_context(|| "Parsing the test directory")?;
     write_commit_datetime_of_last_parse_file(dir)
         .with_context(|| "Writing the last commit date parsed to file")?;
 
@@ -61,17 +72,11 @@ pub(crate) async fn parse_test_directories_forced() -> anyhow::Result<()> {
     todo!()
 }
 
-fn parse_test_dir(eth_test_repo_test_sub_dir: &Path) -> anyhow::Result<()> {
+/// Parses all json tests in the given sub-test directory.
+fn parse_test_directory(eth_test_repo_test_sub_dir: &Path) -> anyhow::Result<()> {
     println!("Parsing test directory {:?}...", eth_test_repo_test_sub_dir);
 
-    let mut parsed_test_sub_dir = PathBuf::new();
-    parsed_test_sub_dir.push(PARSED_TESTS_PATH);
-    parsed_test_sub_dir.push(
-        eth_test_repo_test_sub_dir
-            .strip_prefix(ETH_TESTS_REPO_PATH)
-            .unwrap(),
-    );
-
+    let parsed_test_sub_dir = get_parsed_test_path_for_eth_test_path(eth_test_repo_test_sub_dir);
     let whitelist = init_json_field_whitelist();
 
     for f_path in get_entries_of_dir(eth_test_repo_test_sub_dir)
@@ -90,17 +95,25 @@ fn parse_test_dir(eth_test_repo_test_sub_dir: &Path) -> anyhow::Result<()> {
 
 fn parse_eth_test(
     eth_test_contents: Value,
-    _parsed_out_path: &Path,
+    parsed_out_path: &Path,
     whitelist: &JsonFieldWhiteList,
 ) -> anyhow::Result<()> {
     let mut relevant_fields = HashMap::new();
     extract_relevant_fields("root", eth_test_contents, &mut relevant_fields, whitelist);
 
-    let _parsed_test = process_extracted_fields(relevant_fields)?;
+    let generated_inputs = process_extracted_fields(relevant_fields)?;
+    fs::write(
+        parsed_out_path,
+        &serde_json::to_string(&generated_inputs).unwrap(),
+    )
+    .unwrap();
 
     Ok(())
 }
 
+/// Extract any JSON fields that are in the whitelist.
+/// If a field matches, the entire value is extracted (which could include
+/// multiple JSON values).
 fn extract_relevant_fields(
     k: &str,
     v: Value,
@@ -119,9 +132,23 @@ fn extract_relevant_fields(
     }
 }
 
-fn process_extracted_fields(fields: ExtractedWhitelistedJson) -> anyhow::Result<ParsedTest> {
-    let _parsed_accounts = accounts_from_json(&fields[ACCOUNTS_JSON_FIELD])?;
-    todo!();
+fn process_extracted_fields(fields: ExtractedWhitelistedJson) -> anyhow::Result<GenerationInputs> {
+    let account_info = parse_initial_account_state_from_json(&fields[ACCOUNTS_JSON_FIELD])?;
+    let receipts_trie = parse_receipt_trie_from_json(&fields[RECEIPTS_JSON_FIELD]);
+    let txn_info = parse_txn_trie_from_json(&fields[BLOCKS_JSON_FIELD]);
+    let block_metadata = parse_block_metadata_from_json(
+        &fields[BLOCKS_JSON_FIELD],
+        &fields[GENESIS_BLOCK_JSON_FIELD],
+    );
+
+    Ok(GenerationInputs {
+        signed_txns: txn_info.signed_txns,
+        state_trie: account_info.account_trie,
+        transactions_trie: txn_info.txn_trie,
+        receipts_trie,
+        storage_tries: account_info.account_storage_tries,
+        block_metadata,
+    })
 }
 
 fn init_json_field_whitelist() -> HashSet<&'static str> {
@@ -129,7 +156,9 @@ fn init_json_field_whitelist() -> HashSet<&'static str> {
 
     whitelist.insert(BERLIN_JSON_FIELD);
     whitelist.insert(ACCOUNTS_JSON_FIELD);
-    whitelist.insert(TXNS_JSON_FIELD);
+    whitelist.insert(RECEIPTS_JSON_FIELD);
+    whitelist.insert(BLOCKS_JSON_FIELD);
+    whitelist.insert(GENESIS_BLOCK_JSON_FIELD);
 
     whitelist
 }
