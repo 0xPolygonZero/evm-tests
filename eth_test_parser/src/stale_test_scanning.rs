@@ -1,3 +1,6 @@
+//! Logic to determine which tests have changed upstream since we last ran this
+//! tool.
+
 use std::{
     fs::{self, read_to_string, DirEntry},
     path::{Path, PathBuf},
@@ -16,6 +19,11 @@ use crate::{
 
 const TEST_GROUPS: [&str; 1] = ["GeneralStateTests"];
 
+/// Since we only want to reparse test groups that have changed upstream since
+/// we last ran the parser, we get the datetime of the last commit for the
+/// sub-test directory and compare it to the last parse time that we wrote to
+/// file for the directory. If the commit time is newer, then we reparse the
+/// sub-test directory.
 pub(crate) fn determine_which_test_dirs_need_reparsing() -> anyhow::Result<Vec<PathBuf>> {
     let mut test_subgroup_dirs_needing_reparse = Vec::new();
 

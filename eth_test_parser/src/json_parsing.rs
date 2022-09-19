@@ -21,13 +21,6 @@ type HashType = U256; // Placeholder
 type Sha3256Hasher = CoreWrapper<Sha3_256Core>;
 
 #[derive(Debug)]
-pub(crate) struct ParsedJsonOutput {
-    accounts: JsonAccountsParseOutput,
-    receipts: JsonReceiptsParseOutput,
-    txns: JsonTxnParseOutput,
-}
-
-#[derive(Debug)]
 pub(crate) struct JsonAccountsParseOutput {
     pub(crate) account_trie: PartialTrie,
     pub(crate) account_storage_tries: Vec<(Address, PartialTrie)>,

@@ -1,3 +1,5 @@
+//! Utils to clone and pull the eth test repo.
+
 use std::{path::Path, process::Command};
 
 use crate::{types::ETH_TESTS_REPO_PATH, utils::run_cmd_no_output};
