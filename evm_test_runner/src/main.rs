@@ -1,3 +1,8 @@
+use arg_parsing::ProgArgs;
+use clap::Parser;
+
+mod arg_parsing;
+
 fn main() {
-    println!("Hello, world!");
+    let _args = ProgArgs::parse();
 }
