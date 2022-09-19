@@ -16,6 +16,7 @@ use std::{
 };
 
 use anyhow::Context;
+use common::types::ParsedTest;
 use log::{debug, info};
 use plonky2_evm::generation::GenerationInputs;
 use serde_json::Value;
@@ -132,7 +133,7 @@ fn extract_relevant_fields(
     }
 }
 
-fn process_extracted_fields(fields: ExtractedWhitelistedJson) -> anyhow::Result<GenerationInputs> {
+fn process_extracted_fields(fields: ExtractedWhitelistedJson) -> anyhow::Result<ParsedTest> {
     let account_info = parse_initial_account_state_from_json(&fields[ACCOUNTS_JSON_FIELD])?;
     let receipts_trie = parse_receipt_trie_from_json(&fields[RECEIPTS_JSON_FIELD]);
     let txn_info = parse_txn_trie_from_json(&fields[BLOCKS_JSON_FIELD]);
@@ -141,13 +142,21 @@ fn process_extracted_fields(fields: ExtractedWhitelistedJson) -> anyhow::Result<
         &fields[GENESIS_BLOCK_JSON_FIELD],
     );
 
-    Ok(GenerationInputs {
+    let plonky2_inputs = GenerationInputs {
         signed_txns: txn_info.signed_txns,
         state_trie: account_info.account_trie,
         transactions_trie: txn_info.txn_trie,
         receipts_trie,
         storage_tries: account_info.account_storage_tries,
         block_metadata,
+    };
+
+    // TODO: Parse from the `Post` JSON field if present...
+    let expected_final_account_states = None;
+
+    Ok(ParsedTest {
+        plonky2_inputs,
+        expected_final_account_states,
     })
 }
 

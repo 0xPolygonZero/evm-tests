@@ -203,7 +203,10 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "eth-trie-utils",
+ "plonky2_evm",
  "pretty_env_logger",
+ "serde",
 ]
 
 [[package]]
