@@ -30,10 +30,10 @@ pub(crate) struct Test {
 }
 
 pub(crate) async fn parse_all_tests(
-    parsed_test_path: &Path,
+    parsed_tests_path: &Path,
 ) -> anyhow::Result<Vec<ParsedTestGroup>> {
     let (mut groups, mut join_set, mut read_dirs) =
-        parse_dir_init(Path::new(parsed_test_path)).await?;
+        parse_dir_init(Path::new(parsed_tests_path)).await?;
 
     while let Some(entry) = read_dirs.next().await {
         let entry = entry?;
