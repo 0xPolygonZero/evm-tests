@@ -1,3 +1,5 @@
+// High code duplication. Difficult to reduce, but may want to tackle later.
+
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
@@ -28,12 +30,11 @@ pub(crate) struct Test {
 }
 
 pub(crate) async fn parse_all_tests(
-    parsed_tests_path: &Path,
+    parsed_test_path: &Path,
 ) -> anyhow::Result<Vec<ParsedTestGroup>> {
-    let mut groups = Vec::new();
-    let mut join_set = JoinSet::new();
+    let (mut groups, mut join_set, mut read_dirs) =
+        parse_dir_init(Path::new(parsed_test_path)).await?;
 
-    let mut read_dirs = ReadDirStream::new(read_dir(&parsed_tests_path).await?);
     while let Some(entry) = read_dirs.next().await {
         let entry = entry?;
 
@@ -41,24 +42,18 @@ pub(crate) async fn parse_all_tests(
             continue;
         }
 
-        let group_path = entry.path();
-        join_set.spawn(parse_test_group(group_path));
+        join_set.spawn(parse_test_group(entry.path()));
     }
 
-    while let Some(h) = join_set.join_next().await {
-        groups.push(h??);
-    }
+    wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut groups).await?;
 
     Ok(groups)
 }
 
 async fn parse_test_group(path: PathBuf) -> anyhow::Result<ParsedTestGroup> {
     info!("Reading in test group {:?}...", path);
+    let (mut sub_groups, mut join_set, mut read_dirs) = parse_dir_init(&path).await?;
 
-    let mut sub_groups = Vec::new();
-    let mut join_set = JoinSet::new();
-
-    let mut read_dirs = ReadDirStream::new(read_dir(&path).await?);
     while let Some(entry) = read_dirs.next().await {
         let entry = entry?;
 
@@ -66,13 +61,10 @@ async fn parse_test_group(path: PathBuf) -> anyhow::Result<ParsedTestGroup> {
             continue;
         }
 
-        let sub_group_path = entry.path();
-        join_set.spawn(parse_test_sub_group(path.join(sub_group_path)));
+        join_set.spawn(parse_test_sub_group(path.join(entry.path())));
     }
 
-    while let Some(h) = join_set.join_next().await {
-        sub_groups.push(h??);
-    }
+    wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut sub_groups).await?;
 
     Ok(ParsedTestGroup {
         name: path.to_string_lossy().to_string(),
@@ -82,11 +74,8 @@ async fn parse_test_group(path: PathBuf) -> anyhow::Result<ParsedTestGroup> {
 
 async fn parse_test_sub_group(path: PathBuf) -> anyhow::Result<ParsedTestSubGroup> {
     debug!("Reading in test subgroup {:?}...", path);
+    let (mut tests, mut join_set, mut read_dirs) = parse_dir_init(&path).await?;
 
-    let mut tests = Vec::new();
-    let mut join_set = JoinSet::new();
-
-    let mut read_dirs = ReadDirStream::new(read_dir(&path).await?);
     while let Some(entry) = read_dirs.next().await {
         let entry = entry?;
 
@@ -94,13 +83,10 @@ async fn parse_test_sub_group(path: PathBuf) -> anyhow::Result<ParsedTestSubGrou
             continue;
         }
 
-        let test_path = entry.path();
-        join_set.spawn(read_parsed_test(path.join(test_path)));
+        join_set.spawn(read_parsed_test(path.join(entry.path())));
     }
 
-    while let Some(h) = join_set.join_next().await {
-        tests.push(h??);
-    }
+    wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut tests).await?;
 
     Ok(ParsedTestSubGroup {
         name: get_file_stem(&path)?,
@@ -119,6 +105,25 @@ async fn read_parsed_test(path: PathBuf) -> anyhow::Result<Test> {
         name: get_file_stem(&path)?,
         info: parsed_test,
     })
+}
+
+async fn wait_for_task_to_finish_and_push_to_vec<T: 'static>(
+    join_set: &mut JoinSet<anyhow::Result<T>>,
+    out_vec: &mut Vec<T>,
+) -> anyhow::Result<()> {
+    while let Some(h) = join_set.join_next().await {
+        out_vec.push(h.with_context(|| "Getting the result from a join vec")??);
+    }
+
+    Ok(())
+}
+
+async fn parse_dir_init<T, U>(path: &Path) -> anyhow::Result<(Vec<T>, JoinSet<U>, ReadDirStream)> {
+    let output = Vec::new();
+    let join_set = JoinSet::new();
+    let read_dirs = ReadDirStream::new(read_dir(path).await?);
+
+    Ok((output, join_set, read_dirs))
 }
 
 fn get_file_stem(path: &Path) -> anyhow::Result<String> {
