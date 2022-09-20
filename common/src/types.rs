@@ -2,6 +2,7 @@ use eth_trie_utils::partial_trie::PartialTrie;
 use plonky2_evm::generation::GenerationInputs;
 use serde::{Deserialize, Serialize};
 
+pub const PARSED_TESTS_EXT: &str = "zero_test";
 /// A parsed JSON Ethereum test that is ready to be fed into `Plonky2`.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ParsedTest {

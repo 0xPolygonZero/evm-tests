@@ -7,8 +7,8 @@ use clap::Parser;
 pub(crate) struct ProgArgs {
     /// Write the output from running the tests to a markdown file.
     #[clap(short = 'm', action)]
-    output_result_markdown: bool,
+    pub(crate) output_result_markdown: bool,
 
     /// The path to the parsed tests directory.
-    parsed_tests_path: PathBuf,
+    pub(crate) parsed_tests_path: PathBuf,
 }

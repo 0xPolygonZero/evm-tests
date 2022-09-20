@@ -11,4 +11,9 @@ edition = "2021"
 common = { path = "../common" }
 plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "928e8bc0e90507b5aeee2900a266bfc02dadb05b" }
 
+anyhow = { version = "1.0", features = ["backtrace"] }
 clap = {version = "3.2.17", features = ["derive"] }
+log = "0.4.17"
+serde_json = "1.0.85"
+tokio = {version = "1.21.1", features = ["fs", "macros", "rt-multi-thread"] }
+tokio-stream = {version  = "0.1.10", features = ["fs"] }
