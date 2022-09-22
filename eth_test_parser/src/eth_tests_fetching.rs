@@ -2,31 +2,55 @@
 
 use std::{path::Path, process::Command};
 
-use crate::{types::ETH_TESTS_REPO_PATH, utils::run_cmd_no_output};
+use crate::{
+    config::{ETH_TESTS_REPO_LOCAL_PATH, ETH_TESTS_REPO_URL, TEST_GROUPS},
+    utils::run_cmd,
+};
 
-const ETH_TESTS_REPO_URL: &str = "https://github.com/ethereum/tests.git";
-
-pub(crate) fn update_eth_tests_upstream() -> anyhow::Result<()> {
-    if !eth_test_repo_exists() {
-        return clone_eth_test_repo();
+pub(crate) fn clone_or_update_remote_tests() {
+    if Path::new(&ETH_TESTS_REPO_LOCAL_PATH).exists() {
+        update_remote_tests();
+    } else {
+        download_remote_tests();
     }
-
-    // Repo already exists. Try pulling to see if there are any new changes.
-    pull_repo()?;
-
-    Ok(())
 }
 
-fn eth_test_repo_exists() -> bool {
-    Path::new(&format!("{}.git", ETH_TESTS_REPO_PATH)).exists()
-}
-
-fn clone_eth_test_repo() -> anyhow::Result<()> {
-    println!("Cloning Ethereum tests repo... ({})", ETH_TESTS_REPO_URL);
-    run_cmd_no_output(Command::new("git").args(["clone", ETH_TESTS_REPO_URL, ETH_TESTS_REPO_PATH]))
-}
-
-fn pull_repo() -> anyhow::Result<()> {
+fn update_remote_tests() {
     println!("Pulling for the most recent changes for the Ethereum tests repo...");
-    run_cmd_no_output(Command::new("git").args(["-C", ETH_TESTS_REPO_PATH, "pull"]))
+    run_cmd(Command::new("git").arg("pull")).unwrap();
+}
+
+fn download_remote_tests() {
+    println!("Cloning Ethereum tests repo... ({})", ETH_TESTS_REPO_URL);
+
+    // Sparse clone the repository with --depth=1. We do this to avoid large
+    // download size.
+    run_cmd(Command::new("git").args([
+        "clone",
+        // --depth=1 ignores version history.
+        "--depth=1",
+        // --sparse employs a sparse-checkout, with only files in the toplevel directory
+        // initially being present. The sparse-checkout (below) command is used to
+        // grow the working directory as needed.
+        "--sparse",
+        // --filter=blob:none will filter out all blobs (file contents) until needed by Git
+        "--filter=blob:none",
+        ETH_TESTS_REPO_URL,
+        ETH_TESTS_REPO_LOCAL_PATH,
+    ]))
+    .unwrap();
+
+    println!(
+        "Setting sparse checkout for test groups... ({})",
+        TEST_GROUPS.join(", ")
+    );
+    // sparse-checkout out the relevant test group folders.
+    run_cmd(Command::new("git").args([
+        "-C",
+        ETH_TESTS_REPO_LOCAL_PATH,
+        "sparse-checkout",
+        "set",
+        &TEST_GROUPS.join(" "),
+    ]))
+    .unwrap();
 }

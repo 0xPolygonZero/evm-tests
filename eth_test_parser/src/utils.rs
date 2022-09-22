@@ -1,20 +1,14 @@
 use std::{
-    fs::{self, File},
-    ops::BitAnd,
+    fmt::Debug,
+    fs::{self, DirEntry, File},
     path::{Path, PathBuf},
     process::{Command, Output},
 };
 
 use anyhow::{bail, Context};
-use common::types::PARSED_TESTS_PATH;
 use ethereum_types::{Address, U256};
-use num_traits::PrimInt;
 
-use crate::types::ETH_TESTS_REPO_PATH;
-
-pub(crate) fn run_cmd_no_output(cmd: &mut Command) -> anyhow::Result<()> {
-    run_cmd_common(cmd).map(|_| ())
-}
+use crate::config::{ETH_TESTS_REPO_LOCAL_PATH, PARSED_TESTS_PATH};
 
 pub(crate) fn run_cmd(cmd: &mut Command) -> anyhow::Result<String> {
     let res = run_cmd_common(cmd)?;
@@ -44,18 +38,20 @@ fn executing_cmd_ctx_str(cmd: &Command) -> String {
     )
 }
 
-pub(crate) fn check_that_required_tools_are_installed() -> anyhow::Result<()> {
-    todo!()
-}
-
-pub(crate) fn get_entries_of_dir(dir_path: &Path) -> impl Iterator<Item = PathBuf> {
+pub(crate) fn get_entries_of_dir<P>(dir_path: P) -> impl Iterator<Item = DirEntry>
+where
+    P: AsRef<Path> + Debug + Copy,
+{
     fs::read_dir(dir_path)
         .unwrap_or_else(|_| panic!("Failed to read files in the directory {:?}", dir_path))
-        .map(|entry| {
-            entry
-                .expect("Error when getting DirEntry from fs::read_dir")
-                .path()
-        })
+        .flatten()
+}
+
+pub(crate) fn get_paths_of_dir<P>(dir_path: P) -> impl Iterator<Item = PathBuf>
+where
+    P: AsRef<Path> + Debug + Copy,
+{
+    get_entries_of_dir(dir_path).map(|entry| entry.path())
 }
 
 pub(crate) fn open_file_with_context(path: &Path) -> anyhow::Result<File> {
@@ -66,13 +62,13 @@ pub(crate) fn open_file_with_context(path: &Path) -> anyhow::Result<File> {
 pub(crate) fn get_parsed_test_path_for_eth_test_path(eth_test_path: &Path) -> PathBuf {
     let mut parsed_path = PathBuf::new();
     parsed_path.push(PARSED_TESTS_PATH);
-    parsed_path.push(eth_test_path.strip_prefix(ETH_TESTS_REPO_PATH).unwrap());
+    parsed_path.push(
+        eth_test_path
+            .strip_prefix(ETH_TESTS_REPO_LOCAL_PATH)
+            .unwrap(),
+    );
 
     parsed_path
-}
-
-pub(crate) fn is_even<T: PrimInt + BitAnd<Output = T>>(num: T) -> bool {
-    (num & T::one()) == T::zero()
 }
 
 /// Run keccak256 on a Ethereum address to get a U256 hash.

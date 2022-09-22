@@ -17,18 +17,20 @@ use std::{
 
 use anyhow::Context;
 use common::types::ParsedTest;
-use log::{debug, info};
+use log::debug;
 use plonky2_evm::generation::GenerationInputs;
 use serde_json::Value;
 
 use crate::{
+    config::{ETH_TESTS_REPO_LOCAL_PATH, TEST_GROUPS},
     json_parsing::{
         parse_block_metadata_from_json, parse_initial_account_state_from_json,
         parse_receipt_trie_from_json, parse_txn_trie_from_json,
     },
-    stale_test_scanning::get_latest_commit_date_of_dir_from_git,
-    types::SUB_TEST_DIR_LAST_CHANGED_FILE_NAME,
-    utils::{get_entries_of_dir, get_parsed_test_path_for_eth_test_path, open_file_with_context},
+    utils::{
+        get_entries_of_dir, get_parsed_test_path_for_eth_test_path, get_paths_of_dir,
+        open_file_with_context,
+    },
 };
 
 type JsonFieldWhiteList = HashSet<&'static str>;
@@ -39,6 +41,20 @@ const ACCOUNTS_JSON_FIELD: &str = "pre";
 const RECEIPTS_JSON_FIELD: &str = "receiptTrie"; // Likely incorrect...
 const BLOCKS_JSON_FIELD: &str = "blocks";
 const GENESIS_BLOCK_JSON_FIELD: &str = "genesisBlockHeader";
+
+pub(crate) fn get_test_group_dirs() -> Vec<PathBuf> {
+    get_entries_of_dir(ETH_TESTS_REPO_LOCAL_PATH)
+        .filter(|entry| {
+            TEST_GROUPS.contains(
+                &entry
+                    .file_name()
+                    .to_str()
+                    .expect("Couldn't convert filename to &str"),
+            )
+        })
+        .map(|entry| entry.path())
+        .collect()
+}
 
 // TODO: Actually make async once it works (if needed)...
 pub(crate) async fn parse_test_directories(
@@ -63,14 +79,8 @@ fn prep_and_parse_test_directory(dir: &Path) -> anyhow::Result<()> {
     })?;
 
     parse_test_directory(dir).with_context(|| "Parsing the test directory")?;
-    write_commit_datetime_of_last_parse_file(dir)
-        .with_context(|| "Writing the last commit date parsed to file")?;
 
     Ok(())
-}
-
-pub(crate) async fn parse_test_directories_forced() -> anyhow::Result<()> {
-    todo!()
 }
 
 /// Parses all json tests in the given sub-test directory.
@@ -80,7 +90,7 @@ fn parse_test_directory(eth_test_repo_test_sub_dir: &Path) -> anyhow::Result<()>
     let parsed_test_sub_dir = get_parsed_test_path_for_eth_test_path(eth_test_repo_test_sub_dir);
     let whitelist = init_json_field_whitelist();
 
-    for f_path in get_entries_of_dir(eth_test_repo_test_sub_dir)
+    for f_path in get_paths_of_dir(eth_test_repo_test_sub_dir)
         .filter(|p| p.extension().and_then(|os_str| os_str.to_str()) == Some("json"))
     {
         debug!("Parsing test {:?}", f_path);
@@ -170,19 +180,4 @@ fn init_json_field_whitelist() -> HashSet<&'static str> {
     whitelist.insert(GENESIS_BLOCK_JSON_FIELD);
 
     whitelist
-}
-
-fn write_commit_datetime_of_last_parse_file(sub_test_dir: &Path) -> anyhow::Result<()> {
-    let last_commit_time = get_latest_commit_date_of_dir_from_git(sub_test_dir)?;
-    let last_commit_time_path = get_parsed_test_path_for_eth_test_path(
-        &sub_test_dir.join(SUB_TEST_DIR_LAST_CHANGED_FILE_NAME),
-    );
-
-    info!(
-        "Updating commit datetime for last parse test subdirectory {:?} to {}.",
-        last_commit_time_path, last_commit_time
-    );
-    fs::write(&last_commit_time_path, last_commit_time.to_string())?;
-
-    Ok(())
 }
