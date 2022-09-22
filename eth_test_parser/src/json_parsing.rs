@@ -20,6 +20,7 @@ type HashType = U256; // Placeholder
 
 type Sha3256Hasher = CoreWrapper<Sha3_256Core>;
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub(crate) struct JsonAccountsParseOutput {
     pub(crate) account_trie: PartialTrie,
