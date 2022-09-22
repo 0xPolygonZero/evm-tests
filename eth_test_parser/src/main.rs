@@ -1,7 +1,7 @@
 use arg_parsing::ProgArgs;
 use clap::Parser;
 use common::utils::init_env_logger;
-use eth_test_parsing::{get_test_group_dirs, parse_test_directories};
+use eth_test_parsing::{get_test_group_sub_dirs, parse_test_directories};
 
 use crate::eth_tests_fetching::clone_or_update_remote_tests;
 
@@ -20,16 +20,15 @@ impl ProgState {
     }
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     init_env_logger();
     let p_args = ProgArgs::parse();
     let state = ProgState::new(p_args);
 
-    run(state).await
+    run(state)
 }
 
-async fn run(_: ProgState) {
+fn run(_: ProgState) {
     clone_or_update_remote_tests();
-    parse_test_directories(get_test_group_dirs()).await.unwrap()
+    parse_test_directories(get_test_group_sub_dirs()).unwrap()
 }

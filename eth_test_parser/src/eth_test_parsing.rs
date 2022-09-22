@@ -42,7 +42,12 @@ const RECEIPTS_JSON_FIELD: &str = "receiptTrie"; // Likely incorrect...
 const BLOCKS_JSON_FIELD: &str = "blocks";
 const GENESIS_BLOCK_JSON_FIELD: &str = "genesisBlockHeader";
 
-pub(crate) fn get_test_group_dirs() -> Vec<PathBuf> {
+pub(crate) fn get_test_group_sub_dirs() -> Vec<PathBuf> {
+    // Expected directory structure
+    // {TestGroupN}
+    // ├── {TestNameN}
+    // │   ├── {test_case_1}.json
+    // │   └── {test_case_n}.json
     get_entries_of_dir(ETH_TESTS_REPO_LOCAL_PATH)
         .filter(|entry| {
             TEST_GROUPS.contains(
@@ -52,12 +57,11 @@ pub(crate) fn get_test_group_dirs() -> Vec<PathBuf> {
                     .expect("Couldn't convert filename to &str"),
             )
         })
-        .map(|entry| entry.path())
+        .flat_map(|entry| get_paths_of_dir(entry.path().to_str().unwrap()).collect::<Vec<_>>())
         .collect()
 }
 
-// TODO: Actually make async once it works (if needed)...
-pub(crate) async fn parse_test_directories(
+pub(crate) fn parse_test_directories(
     test_dirs_needing_reparse: Vec<PathBuf>,
 ) -> anyhow::Result<()> {
     for dir in test_dirs_needing_reparse {
