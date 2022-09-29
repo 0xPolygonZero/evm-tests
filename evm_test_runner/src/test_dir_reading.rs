@@ -13,20 +13,20 @@ use tokio_stream::{wrappers::ReadDirStream, StreamExt};
 
 #[derive(Debug)]
 pub(crate) struct ParsedTestGroup {
-    name: String,
-    sub_groups: Vec<ParsedTestSubGroup>,
+    pub(crate) name: String,
+    pub(crate) sub_groups: Vec<ParsedTestSubGroup>,
 }
 
 #[derive(Debug)]
 pub(crate) struct ParsedTestSubGroup {
-    name: String,
-    tests: Vec<Test>,
+    pub(crate) name: String,
+    pub(crate) tests: Vec<Test>,
 }
 
 #[derive(Debug)]
 pub(crate) struct Test {
-    name: String,
-    info: ParsedTest,
+    pub(crate) name: String,
+    pub(crate) info: ParsedTest,
 }
 
 pub(crate) async fn parse_all_tests(
