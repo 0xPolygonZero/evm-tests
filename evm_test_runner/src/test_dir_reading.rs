@@ -1,3 +1,11 @@
+//! Logic to read in all tests from the parsed test directory. Processes these
+//! files into easy to use structs for running tests.
+//!
+//! Note that there are three "levels" in the test directory:
+//! - Test group (eg. "GeneralStateTests") (Note: likely will only ever be one).
+//! - Test sub-group (eg. "stCreate2").
+//! - Sub-group test (eg. "CREATE2_Bounds.test")
+
 // High code duplication. Difficult to reduce, but may want to tackle later.
 
 use std::path::{Path, PathBuf};
@@ -29,7 +37,8 @@ pub(crate) struct Test {
     pub(crate) info: ParsedTest,
 }
 
-pub(crate) async fn parse_all_tests(
+/// Reads in all parsed tests from the given parsed test directory.
+pub(crate) async fn read_in_all_parsed_tests(
     parsed_tests_path: &Path,
 ) -> anyhow::Result<Vec<ParsedTestGroup>> {
     let (mut groups, mut join_set, mut read_dirs) =

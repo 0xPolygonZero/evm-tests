@@ -1,3 +1,6 @@
+//! Handles feeding the parsed tests into `plonky2` and determining the result.
+//! Essentially converts parsed test into test results.
+
 use std::panic;
 
 use common::types::ParsedTest;
@@ -69,6 +72,7 @@ fn run_test(test: Test) -> TestRunResults {
     }
 }
 
+/// Run a test against `plonky2` and output a result based on what happens.
 fn run_test_and_get_test_result(test: ParsedTest) -> TestResult {
     let proof_run_res = panic::catch_unwind(|| {
         prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
