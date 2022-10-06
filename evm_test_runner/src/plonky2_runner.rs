@@ -14,32 +14,29 @@ use plonky2_evm::{all_stark::AllStark, config::StarkConfig, prover::prove};
 use crate::test_dir_reading::{ParsedTestGroup, ParsedTestSubGroup, Test};
 
 #[derive(Debug)]
-pub(crate) enum TestResult {
+pub(crate) enum TestStatus {
     Passed,
     EvmErr(String),
     EvmPanic(String),
     IncorrectAccountFinalState(H256, H256),
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub(crate) struct TestGroupRunResults {
-    name: String,
-    sub_group_res: Vec<TestSubGroupRunResults>,
+    pub(crate) name: String,
+    pub(crate) sub_group_res: Vec<TestSubGroupRunResults>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub(crate) struct TestSubGroupRunResults {
-    name: String,
-    test_res: Vec<TestRunResults>,
+    pub(crate) name: String,
+    pub(crate) test_res: Vec<TestRunResult>,
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
-pub(crate) struct TestRunResults {
-    name: String,
-    res: TestResult,
+pub(crate) struct TestRunResult {
+    pub(crate) name: String,
+    pub(crate) status: TestStatus,
 }
 
 pub(crate) fn run_plonky2_tests(parsed_tests: Vec<ParsedTestGroup>) -> Vec<TestGroupRunResults> {
@@ -64,16 +61,16 @@ fn run_test_sub_group(sub_group: ParsedTestSubGroup) -> TestSubGroupRunResults {
     }
 }
 
-fn run_test(test: Test) -> TestRunResults {
+fn run_test(test: Test) -> TestRunResult {
     let res = run_test_and_get_test_result(test.info);
-    TestRunResults {
+    TestRunResult {
         name: test.name,
-        res,
+        status: res,
     }
 }
 
 /// Run a test against `plonky2` and output a result based on what happens.
-fn run_test_and_get_test_result(test: ParsedTest) -> TestResult {
+fn run_test_and_get_test_result(test: ParsedTest) -> TestStatus {
     let proof_run_res = panic::catch_unwind(|| {
         prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
             &AllStark::default(),
@@ -85,14 +82,14 @@ fn run_test_and_get_test_result(test: ParsedTest) -> TestResult {
 
     let proof_run_output = match proof_run_res {
         Ok(Ok(res)) => res,
-        Ok(Err(err)) => return TestResult::EvmErr(err.to_string()),
+        Ok(Err(err)) => return TestStatus::EvmErr(err.to_string()),
         Err(err) => {
             let panic_str = match err.downcast::<String>() {
                 Ok(panic_str) => *panic_str,
                 Err(_) => "Unknown panic reason.".to_string(),
             };
 
-            return TestResult::EvmPanic(panic_str);
+            return TestStatus::EvmPanic(panic_str);
         }
     };
 
@@ -102,8 +99,8 @@ fn run_test_and_get_test_result(test: ParsedTest) -> TestResult {
         proof_run_output.public_values.trie_roots_after.state_root.0,
     ));
     if let Some(expected_state_trie_hash) = test.expected_final_account_states && final_state_trie_hash != expected_state_trie_hash {
-        return TestResult::IncorrectAccountFinalState(final_state_trie_hash, expected_state_trie_hash)
+        return TestStatus::IncorrectAccountFinalState(final_state_trie_hash, expected_state_trie_hash)
     }
 
-    TestResult::Passed
+    TestStatus::Passed
 }
