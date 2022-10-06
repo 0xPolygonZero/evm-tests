@@ -13,7 +13,7 @@ mod markdown_generation;
 mod plonky2_runner;
 mod test_dir_reading;
 
-#[tokio::main(flavor = "multi_thread")]
+#[tokio::main()]
 async fn main() -> anyhow::Result<()> {
     let p_args = ProgArgs::parse();
 
