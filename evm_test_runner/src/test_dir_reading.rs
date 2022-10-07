@@ -40,6 +40,7 @@ pub(crate) struct Test {
 /// Reads in all parsed tests from the given parsed test directory.
 pub(crate) async fn read_in_all_parsed_tests(
     parsed_tests_path: &Path,
+    _filter: Option<&String>,
 ) -> anyhow::Result<Vec<ParsedTestGroup>> {
     let (mut groups, mut join_set, mut read_dirs) =
         parse_dir_init(Path::new(parsed_tests_path)).await?;

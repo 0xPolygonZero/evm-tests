@@ -13,7 +13,7 @@ plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "928e
 plonky2 = { git = "https://github.com/mir-protocol/plonky2.git", rev = "928e8bc0e90507b5aeee2900a266bfc02dadb05b", features = ["timing"] }
 
 anyhow = { version = "1.0", features = ["backtrace"] }
-clap = {version = "3.2.17", features = ["derive"] }
+clap = {version = "4.0.10", features = ["derive"] }
 
 ethereum-types = "0.13.1"
 log = "0.4.17"
