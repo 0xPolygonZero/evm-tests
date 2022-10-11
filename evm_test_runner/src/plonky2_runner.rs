@@ -13,12 +13,18 @@ use plonky2_evm::{all_stark::AllStark, config::StarkConfig, prover::prove};
 
 use crate::test_dir_reading::{ParsedTestGroup, ParsedTestSubGroup, Test};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) enum TestStatus {
     Passed,
     EvmErr(String),
     EvmPanic(String),
     IncorrectAccountFinalState(H256, H256),
+}
+
+impl TestStatus {
+    pub(crate) fn passed(&self) -> bool {
+        matches!(self, TestStatus::Passed)
+    }
 }
 
 #[derive(Debug)]

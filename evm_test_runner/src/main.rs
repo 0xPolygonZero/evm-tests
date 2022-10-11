@@ -28,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
     match p_args.cmd {
         RunCommand::Test(_) => {
             info!("Outputting test results to stdout...");
-            output_test_report_for_terminal(test_res);
+            output_test_report_for_terminal(&test_res, filter.clone());
         }
         RunCommand::Report => {
             info!("Generating test results markdown...");
