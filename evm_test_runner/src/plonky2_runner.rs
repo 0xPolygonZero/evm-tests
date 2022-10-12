@@ -4,7 +4,7 @@
 use std::{fmt::Display, panic};
 
 use common::types::ParsedTest;
-use ethereum_types::{BigEndianHash, H256};
+use ethereum_types::H256;
 use plonky2::{
     field::goldilocks_field::GoldilocksField, plonk::config::KeccakGoldilocksConfig,
     util::timing::TimingTree,
@@ -137,15 +137,11 @@ fn run_test_and_get_test_result(test: ParsedTest) -> TestStatus {
         }
     };
 
-    // TODO: Remove `U256` --> `H256` conversion once `plonky2` switches over to
-    // `H256`...
-    let final_state_trie_hash = H256::from_uint(&ethereum_types::U256(
-        proof_run_output.public_values.trie_roots_after.state_root.0,
-    ));
+    let actual_state_trie_hash = proof_run_output.public_values.trie_roots_after.state_root;
 
-    if let Some(expected_state_trie_hash) = test.expected_final_account_states && final_state_trie_hash != expected_state_trie_hash {
+    if let Some(expected_state_trie_hash) = test.expected_final_account_states && actual_state_trie_hash != expected_state_trie_hash {
         let trie_diff = TrieFinalStateDiff {
-            state: TrieComparisonResult::Difference(final_state_trie_hash, expected_state_trie_hash),
+            state: TrieComparisonResult::Difference(actual_state_trie_hash, expected_state_trie_hash),
             receipt: TrieComparisonResult::Correct, // TODO...
             transaction: TrieComparisonResult::Correct, // TODO...
         };
