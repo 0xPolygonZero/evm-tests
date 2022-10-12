@@ -28,7 +28,3 @@ pub(crate) struct ProgArgs {
     #[command(subcommand)]
     pub(crate) cmd: RunCommand,
 }
-
-pub(crate) fn parse_prog_args() -> ProgArgs {
-    ProgArgs::parse()
-}

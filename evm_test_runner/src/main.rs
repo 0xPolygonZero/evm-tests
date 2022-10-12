@@ -1,6 +1,7 @@
 #![feature(let_chains)]
 
-use arg_parsing::{parse_prog_args, RunCommand};
+use arg_parsing::{ProgArgs, RunCommand};
+use clap::Parser;
 use log::info;
 use plonky2_runner::run_plonky2_tests;
 use report_generation::output_test_report_for_terminal;
@@ -15,14 +16,14 @@ mod test_dir_reading;
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
-    let p_args = parse_prog_args();
+    let p_args = ProgArgs::parse();
 
     let filter = match &p_args.cmd {
         RunCommand::Test(filter) => &filter.test_filter,
         RunCommand::Report => &None,
     };
 
-    let parsed_tests = read_in_all_parsed_tests(&p_args.parsed_tests_path, filter.as_ref()).await?;
+    let parsed_tests = read_in_all_parsed_tests(&p_args.parsed_tests_path, filter.clone()).await?;
     let test_res = run_plonky2_tests(parsed_tests);
 
     match p_args.cmd {

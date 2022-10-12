@@ -1,5 +1,5 @@
 //! Handles feeding the parsed tests into `plonky2` and determining the result.
-//! Essentially converts parsed test into test results.
+//! Essentially converts parsed tests into test results.
 
 use std::{fmt::Display, panic};
 

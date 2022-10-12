@@ -1,6 +1,10 @@
-//! Report generation.
-//!
-//! Supports reports in both markdown and output for the terminal.
+//! Performs two types of report generation:
+//! - Generates a summary markdown report which contains an entry for each
+//!   `sub-group` in each `group` showing the number of tests passed/failed (no
+//!   specific info per individual test).
+//! - Generates markdown for all tests that match a string filter output to
+//!   `stdout`. Tests are not displayed in groups and instead are shown in a
+//!   single table with information of failures if any.
 
 use std::{fs, path::Path};
 
@@ -12,6 +16,7 @@ use crate::plonky2_runner::{
 
 const REPORT_OUTPUT: &str = "reports";
 
+/// Template for writing a summary markdown report to file.
 #[derive(Debug, Template)]
 #[template(path = "filtered_test_results.md")]
 struct FilteredTestResultsTemplate {
@@ -38,15 +43,10 @@ impl TestGroupRunResults {
 }
 
 impl FilteredTestResultsTemplate {
+    // Note: Tests are already filtered from a previous step.
     fn new(res: &[TestGroupRunResults], filter_str_template: &Option<String>) -> Self {
-        let tests = res.iter().flat_map(|g| g.flatten_tests());
-
-        let filtered_tests: Vec<_> = match filter_str_template {
-            Some(filter_str) => tests.filter(|t| t.name.contains(filter_str)).collect(),
-            None => tests.collect(),
-        };
-
-        let num_passed = filtered_tests.iter().filter(|t| t.status.passed()).count();
+        let tests: Vec<_> = res.iter().flat_map(|g| g.flatten_tests()).collect();
+        let num_passed = tests.iter().filter(|t| t.status.passed()).count();
 
         let filter_str_template = match filter_str_template {
             Some(filter_str) => format!("({})", filter_str),
@@ -55,12 +55,13 @@ impl FilteredTestResultsTemplate {
 
         Self {
             filter_str_template,
-            passed_info: PassedInfo::new(filtered_tests.len(), num_passed),
-            tests: filtered_tests,
+            passed_info: PassedInfo::new(tests.len(), num_passed),
+            tests,
         }
     }
 }
 
+/// Template for displaying filtered tests to `stdout`.
 #[derive(Debug, Template)]
 #[template(path = "test_results_summary.md")]
 struct TestResultsSummaryTemplate {
@@ -86,6 +87,7 @@ impl From<TestGroupRunResults> for TemplateGroupResultsData {
     fn from(v: TestGroupRunResults) -> Self {
         let sub_groups: Vec<TemplateSubGroupResultsData> =
             v.sub_group_res.into_iter().map(|g| g.into()).collect();
+
         let (tot_tests, num_passed) =
             sub_groups
                 .iter()
@@ -95,11 +97,10 @@ impl From<TestGroupRunResults> for TemplateGroupResultsData {
                         num_passed + sub_g.passed_info.num_passed,
                     )
                 });
-        let passed_info = PassedInfo::new(tot_tests, num_passed);
 
         Self {
             name: v.name,
-            passed_info,
+            passed_info: PassedInfo::new(tot_tests, num_passed),
             sub_groups,
         }
     }
@@ -119,15 +120,14 @@ impl From<TestSubGroupRunResults> for TemplateSubGroupResultsData {
             .filter(|t| matches!(t.status, TestStatus::Passed))
             .count();
 
-        let passed_info = PassedInfo::new(tests.len(), num_passed);
-
         Self {
             name: v.name,
-            passed_info,
+            passed_info: PassedInfo::new(tests.len(), num_passed),
         }
     }
 }
 
+/// Aggregate stats on tests that have passed/failed.
 #[derive(Debug)]
 struct PassedInfo {
     tot_tests: usize,
@@ -147,6 +147,7 @@ impl PassedInfo {
     }
 }
 
+///
 pub(crate) fn output_test_report_for_terminal(
     res: &[TestGroupRunResults],
     test_filter_str: Option<String>,
@@ -159,6 +160,9 @@ pub(crate) fn output_test_report_for_terminal(
     termimad::print_text(&report);
 }
 
+/// Write a generalized markdown report to file showing the number of passing
+/// tests per each group's sub-groups. Does not include any information on
+/// specific test failures.
 pub(crate) fn write_overall_status_report_summary_to_file(
     res: Vec<TestGroupRunResults>,
 ) -> anyhow::Result<()> {
