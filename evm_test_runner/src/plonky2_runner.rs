@@ -1,7 +1,7 @@
 //! Handles feeding the parsed tests into `plonky2` and determining the result.
 //! Essentially converts parsed test into test results.
 
-use std::panic;
+use std::{fmt::Display, panic};
 
 use common::types::ParsedTest;
 use ethereum_types::{BigEndianHash, H256};
@@ -18,7 +18,45 @@ pub(crate) enum TestStatus {
     Passed,
     EvmErr(String),
     EvmPanic(String),
-    IncorrectAccountFinalState(H256, H256),
+    IncorrectAccountFinalState(TrieFinalStateDiff),
+}
+
+/// If one or more trie hashes are different from the expected, then we return a
+/// diff showing which tries where different.
+#[derive(Clone, Debug)]
+pub(crate) struct TrieFinalStateDiff {
+    state: TrieComparisonResult,
+    receipt: TrieComparisonResult,
+    transaction: TrieComparisonResult,
+}
+
+/// A result of comparing the actual outputted `plonky2` trie to the one
+/// expected by the test.
+#[derive(Clone, Debug)]
+enum TrieComparisonResult {
+    Correct,
+    Difference(H256, H256),
+}
+
+impl Display for TrieComparisonResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Correct => write!(f, "Correct"),
+            Self::Difference(actual, expected) => {
+                write!(f, "Difference (Actual: {}, Expected: {})", actual, expected)
+            }
+        }
+    }
+}
+
+impl Display for TrieFinalStateDiff {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "State: {}, Receipt: {}, Transaction: {}",
+            self.state, self.receipt, self.transaction
+        )
+    }
 }
 
 impl TestStatus {
@@ -104,9 +142,19 @@ fn run_test_and_get_test_result(test: ParsedTest) -> TestStatus {
     let final_state_trie_hash = H256::from_uint(&ethereum_types::U256(
         proof_run_output.public_values.trie_roots_after.state_root.0,
     ));
+
     if let Some(expected_state_trie_hash) = test.expected_final_account_states && final_state_trie_hash != expected_state_trie_hash {
-        return TestStatus::IncorrectAccountFinalState(final_state_trie_hash, expected_state_trie_hash)
+        let trie_diff = TrieFinalStateDiff {
+            state: TrieComparisonResult::Difference(final_state_trie_hash, expected_state_trie_hash),
+            receipt: TrieComparisonResult::Correct, // TODO...
+            transaction: TrieComparisonResult::Correct, // TODO...
+        };
+
+        return TestStatus::IncorrectAccountFinalState(trie_diff)
     }
+
+    // TODO: Also check receipt and txn hashes once these are provided by the
+    // parser...
 
     TestStatus::Passed
 }
