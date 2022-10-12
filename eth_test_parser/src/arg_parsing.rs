@@ -1,5 +1,9 @@
 use clap::Parser;
 
 #[derive(Debug, Parser)]
-#[clap(author, version, about)]
-pub(crate) struct ProgArgs {}
+#[command(author, version, about)]
+pub(crate) struct ProgArgs {
+    // #[arg(short, long, default_value_t = false)]
+    #[arg(short, long, default_value_t = false)]
+    pub no_fetch: bool,
+}

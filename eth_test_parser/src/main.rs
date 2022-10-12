@@ -15,28 +15,21 @@ mod fs_scaffolding;
 mod trie_builder;
 mod utils;
 
-pub(crate) struct ProgState {}
-
-impl ProgState {
-    fn new(_: ProgArgs) -> Self {
-        Self {}
-    }
-}
-
 fn main() -> Result<()> {
     init_env_logger();
     let p_args = ProgArgs::parse();
-    let state = ProgState::new(p_args);
 
-    run(state)
+    run(p_args)
 }
 
-fn run(_: ProgState) -> Result<()> {
-    // Fetch most recent test json.
-    clone_or_update_remote_tests();
+fn run(ProgArgs { no_fetch }: ProgArgs) -> Result<()> {
+    if !no_fetch {
+        // Fetch most recent test json.
+        clone_or_update_remote_tests();
 
-    // Create output directories mirroring the structure of source tests.
-    prepare_output_dir()?;
+        // Create output directories mirroring the structure of source tests.
+        prepare_output_dir()?;
+    }
 
     // TODO: Use deserialized test structs to construct plonky2 generation inputs.
     for (test_dir_entry, test_body) in get_deserialized_test_bodies()? {
