@@ -40,6 +40,7 @@ pub(crate) struct Test {
 /// Reads in all parsed tests from the given parsed test directory.
 pub(crate) async fn read_in_all_parsed_tests(
     parsed_tests_path: &Path,
+    filter_str: Option<String>,
 ) -> anyhow::Result<Vec<ParsedTestGroup>> {
     let (mut groups, mut join_set, mut read_dirs) =
         parse_dir_init(Path::new(parsed_tests_path)).await?;
@@ -51,7 +52,7 @@ pub(crate) async fn read_in_all_parsed_tests(
             continue;
         }
 
-        join_set.spawn(parse_test_group(entry.path()));
+        join_set.spawn(parse_test_group(entry.path(), filter_str.clone()));
     }
 
     wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut groups).await?;
@@ -59,7 +60,10 @@ pub(crate) async fn read_in_all_parsed_tests(
     Ok(groups)
 }
 
-async fn parse_test_group(path: PathBuf) -> anyhow::Result<ParsedTestGroup> {
+async fn parse_test_group(
+    path: PathBuf,
+    filter_str: Option<String>,
+) -> anyhow::Result<ParsedTestGroup> {
     info!("Reading in test group {:?}...", path);
     let (mut sub_groups, mut join_set, mut read_dirs) = parse_dir_init(&path).await?;
 
@@ -70,7 +74,10 @@ async fn parse_test_group(path: PathBuf) -> anyhow::Result<ParsedTestGroup> {
             continue;
         }
 
-        join_set.spawn(parse_test_sub_group(path.join(entry.path())));
+        join_set.spawn(parse_test_sub_group(
+            path.join(entry.path()),
+            filter_str.clone(),
+        ));
     }
 
     wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut sub_groups).await?;
@@ -81,7 +88,10 @@ async fn parse_test_group(path: PathBuf) -> anyhow::Result<ParsedTestGroup> {
     })
 }
 
-async fn parse_test_sub_group(path: PathBuf) -> anyhow::Result<ParsedTestSubGroup> {
+async fn parse_test_sub_group(
+    path: PathBuf,
+    filter_str: Option<String>,
+) -> anyhow::Result<ParsedTestSubGroup> {
     debug!("Reading in test subgroup {:?}...", path);
     let (mut tests, mut join_set, mut read_dirs) = parse_dir_init(&path).await?;
 
@@ -92,7 +102,12 @@ async fn parse_test_sub_group(path: PathBuf) -> anyhow::Result<ParsedTestSubGrou
             continue;
         }
 
-        join_set.spawn(read_parsed_test(path.join(entry.path())));
+        // Reject test if the filter string does not match.
+        if let Some(ref filter_str) = filter_str && !path.to_str().map_or(false, |path_str| path_str.contains(filter_str)) {
+            continue;
+        }
+
+        join_set.spawn(parse_test(path.join(entry.path())));
     }
 
     wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut tests).await?;
@@ -103,7 +118,7 @@ async fn parse_test_sub_group(path: PathBuf) -> anyhow::Result<ParsedTestSubGrou
     })
 }
 
-async fn read_parsed_test(path: PathBuf) -> anyhow::Result<Test> {
+async fn parse_test(path: PathBuf) -> anyhow::Result<Test> {
     trace!("Reading in {:?}...", path);
 
     let parsed_test_bytes = fs::read(&path).await?;
@@ -127,6 +142,9 @@ async fn wait_for_task_to_finish_and_push_to_vec<T: 'static>(
     Ok(())
 }
 
+/// Helper function to reduce code duplication.
+///
+/// Initializes variables that are common for each level of directory parsing.
 async fn parse_dir_init<T, U>(path: &Path) -> anyhow::Result<(Vec<T>, JoinSet<U>, ReadDirStream)> {
     let output = Vec::new();
     let join_set = JoinSet::new();
