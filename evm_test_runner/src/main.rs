@@ -1,6 +1,6 @@
 #![feature(let_chains)]
 
-use arg_parsing::{ProgArgs, RunCommand};
+use arg_parsing::{ProgArgs, ReportType};
 use clap::Parser;
 use log::info;
 use plonky2_runner::run_plonky2_tests;
@@ -16,22 +16,21 @@ mod test_dir_reading;
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
-    let p_args = ProgArgs::parse();
+    let ProgArgs {
+        test_filter,
+        report_type,
+        parsed_tests_path,
+    } = ProgArgs::parse();
 
-    let filter = match &p_args.cmd {
-        RunCommand::Test(filter) => &filter.test_filter,
-        RunCommand::Report => &None,
-    };
-
-    let parsed_tests = read_in_all_parsed_tests(&p_args.parsed_tests_path, filter.clone()).await?;
+    let parsed_tests = read_in_all_parsed_tests(&parsed_tests_path, test_filter.clone()).await?;
     let test_res = run_plonky2_tests(parsed_tests);
 
-    match p_args.cmd {
-        RunCommand::Test(_) => {
+    match report_type {
+        ReportType::Test => {
             info!("Outputting test results to stdout...");
-            output_test_report_for_terminal(&test_res, filter.clone());
+            output_test_report_for_terminal(&test_res, test_filter.clone());
         }
-        RunCommand::Report => {
+        ReportType::Summary => {
             info!("Generating test results markdown...");
             write_overall_status_report_summary_to_file(test_res)?;
         }
