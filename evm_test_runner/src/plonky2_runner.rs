@@ -6,6 +6,7 @@ use std::{cell::RefCell, fmt::Display, panic};
 use backtrace::Backtrace;
 use common::types::ParsedTest;
 use ethereum_types::H256;
+use indicatif::ProgressIterator;
 use log::trace;
 use plonky2::{
     field::goldilocks_field::GoldilocksField, plonk::config::KeccakGoldilocksConfig,
@@ -91,6 +92,17 @@ pub(crate) struct TestGroupRunResults {
     pub(crate) sub_group_res: Vec<TestSubGroupRunResults>,
 }
 
+fn num_tests_in_groups<'a>(groups: impl Iterator<Item = &'a ParsedTestGroup> + 'a) -> u64 {
+    groups
+        .map(|g| {
+            g.sub_groups
+                .iter()
+                .flat_map(|sub_g| sub_g.tests.iter())
+                .count() as u64
+        })
+        .sum()
+}
+
 #[derive(Debug)]
 pub(crate) struct TestSubGroupRunResults {
     pub(crate) name: String,
@@ -114,7 +126,14 @@ pub(crate) fn run_plonky2_tests(parsed_tests: Vec<ParsedTestGroup>) -> Vec<TestG
         let trace = Backtrace::new();
         BACKTRACE.with(move |b| b.borrow_mut().replace(trace));
     }));
-    let res = parsed_tests.into_iter().map(run_test_group).collect();
+
+    let num_tests = num_tests_in_groups(parsed_tests.iter());
+
+    let res = parsed_tests
+        .into_iter()
+        .progress_count(num_tests)
+        .map(run_test_group)
+        .collect();
     panic::set_hook(orig_panic_hook);
 
     res
