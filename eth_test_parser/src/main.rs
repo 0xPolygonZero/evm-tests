@@ -34,6 +34,10 @@ fn run(ProgArgs { no_fetch }: ProgArgs) -> Result<()> {
     // TODO: Use deserialized test structs to construct plonky2 generation inputs.
     for (test_dir_entry, test_body) in get_deserialized_test_bodies()? {
         println!("deserialized test {:?}: {:?}", test_dir_entry, test_body);
+
+        // if test_body.transaction.gas_limit.len() > 1 {
+        //     println!("{:?}", test_body);
+        // }
     }
 
     Ok(())
