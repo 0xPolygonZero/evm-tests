@@ -17,9 +17,24 @@ The runner feeds the parsed tests into the EVM. Successes are defined as no erro
 
 The runner also outputs a results file (likely as a `*.md`) which contains statistics on the last test run.
 
+## Quick Start
+*TODO: Add more details...*
+
+Run the parser to parse the Eth tests into a format usable by `plonky2`:
+```sh
+cd eth_test_parser
+cargo run
+```
+
+Then launch the runner pointing it at the parsed tests directory:
+```sh
+cd ../evm_test_runner
+cargo run -- -r summary ../eth_test_parser/generation_inputs # For a high-level summary report
+cargo run -- -r test ../eth_test_parser/generation_inputs # For detailed information per test (likely want to use a filter with `-f`)
+```
+
 ## Other
 [Polygon Hermez](https://github.com/0xPolygonHermez) is doing something similar [here](https://github.com/0xPolygonHermez/zkevm-testvectors).
-
 
 ## License
 Licensed under either of

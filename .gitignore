@@ -5,6 +5,6 @@
 .idea/
 .vscode
 
-eth_test_parser/eth_tests
-eth_test_parser/generation_inputs
-evm_test_runner/reports
+eth_tests
+generation_inputs
+reports
