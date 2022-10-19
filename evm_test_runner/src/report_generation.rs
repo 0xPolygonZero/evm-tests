@@ -8,6 +8,7 @@
 
 use std::{fs, path::Path};
 
+use anyhow::Context;
 use askama::Template;
 
 use crate::plonky2_runner::{
@@ -172,7 +173,10 @@ pub(crate) fn write_overall_status_report_summary_to_file(
         .expect("Error rendering summary report markdown");
 
     let summary_path = Path::new(&REPORT_OUTPUT).join("summary.md");
+    fs::create_dir_all(summary_path.parent().unwrap())
+        .with_context(|| format!("Creating report subdirectory {}", REPORT_OUTPUT))?;
 
-    fs::write(summary_path, report)?;
+    fs::write(&summary_path, report)
+        .with_context(|| format!("Writing report to {:?}", summary_path))?;
     Ok(())
 }
