@@ -102,12 +102,16 @@ impl TestBody {
             .iter()
             .filter(|(_, pre_acc)| !pre_acc.code.0.is_empty())
             .map(|(acc_key, pre_acc)| {
-                let storage_trie = PartialTrie::from_iter(pre_acc.storage.iter().map(|(k, v)| {
-                    (
-                        Nibbles::from(hash(&u256_to_be_bytes(*k))),
-                        v.rlp_bytes().into(),
-                    )
-                }));
+                let storage_trie = pre_acc
+                    .storage
+                    .iter()
+                    .map(|(k, v)| {
+                        (
+                            Nibbles::from(hash(&u256_to_be_bytes(*k))),
+                            v.rlp_bytes().into(),
+                        )
+                    })
+                    .collect();
 
                 (*acc_key, storage_trie)
             })
@@ -115,29 +119,38 @@ impl TestBody {
     }
 
     fn get_state_trie(&self, storage_tries: &[(H160, PartialTrie)]) -> PartialTrie {
-        PartialTrie::from_iter(self.pre.iter().map(|(acc_key, pre_acc)| {
-            let addr_hash = hash(acc_key.as_bytes());
-            let (code_hash, storage_hash) = get_pre_account_hashes(acc_key, pre_acc, storage_tries);
+        self.pre
+            .iter()
+            .map(|(acc_key, pre_acc)| {
+                let addr_hash = hash(acc_key.as_bytes());
+                let (code_hash, storage_hash) =
+                    get_pre_account_hashes(acc_key, pre_acc, storage_tries);
 
-            let rlp = AccountRlp {
-                balance: pre_acc.balance,
-                nonce: pre_acc.nonce,
-                code_hash,
-                storage_hash,
-            }
-            .rlp_bytes();
+                let rlp = AccountRlp {
+                    balance: pre_acc.balance,
+                    nonce: pre_acc.nonce,
+                    code_hash,
+                    storage_hash,
+                }
+                .rlp_bytes();
 
-            (addr_hash.into(), rlp.into())
-        }))
+                (addr_hash.into(), rlp.into())
+            })
+            .collect()
     }
 
     fn get_txn_trie(&self) -> PartialTrie {
-        PartialTrie::from_iter(self.post.merge.iter().enumerate().map(|(txn_idx, post)| {
-            (
-                Nibbles::from_bytes_be(&txn_idx.to_be_bytes()).unwrap(),
-                post.txbytes.0.clone(),
-            )
-        }))
+        self.post
+            .merge
+            .iter()
+            .enumerate()
+            .map(|(txn_idx, post)| {
+                (
+                    Nibbles::from_bytes_be(&txn_idx.to_be_bytes()).unwrap(),
+                    post.txbytes.0.clone(),
+                )
+            })
+            .collect()
     }
 }
 
