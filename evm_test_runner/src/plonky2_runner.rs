@@ -6,7 +6,7 @@ use std::{cell::RefCell, fmt::Display, panic};
 use backtrace::Backtrace;
 use common::types::ParsedTest;
 use ethereum_types::H256;
-use indicatif::ProgressIterator;
+use indicatif::{ProgressBar, ProgressStyle};
 use log::trace;
 use plonky2::{
     field::goldilocks_field::GoldilocksField, plonk::config::KeccakGoldilocksConfig,
@@ -116,6 +116,12 @@ pub(crate) struct TestRunResult {
 }
 
 pub(crate) fn run_plonky2_tests(parsed_tests: Vec<ParsedTestGroup>) -> Vec<TestGroupRunResults> {
+    let num_tests = num_tests_in_groups(parsed_tests.iter());
+    let mut prog_bar = ProgressBar::new(num_tests).with_style(
+        ProgressStyle::with_template("ETA: [{eta_precise}] | Test: {msg}\n{wide_bar} {pos}/{len}")
+            .unwrap(),
+    );
+
     let orig_panic_hook = panic::take_hook();
 
     // When we catch panics from `plonky2`, they still print to `stderr` even though
@@ -127,40 +133,47 @@ pub(crate) fn run_plonky2_tests(parsed_tests: Vec<ParsedTestGroup>) -> Vec<TestG
         BACKTRACE.with(move |b| b.borrow_mut().replace(trace));
     }));
 
-    let num_tests = num_tests_in_groups(parsed_tests.iter());
-
     let res = parsed_tests
         .into_iter()
-        .progress_count(num_tests)
-        .map(run_test_group)
+        .map(|g| run_test_group(g, &mut prog_bar))
         .collect();
     panic::set_hook(orig_panic_hook);
 
     res
 }
 
-fn run_test_group(group: ParsedTestGroup) -> TestGroupRunResults {
+fn run_test_group(group: ParsedTestGroup, bar: &mut ProgressBar) -> TestGroupRunResults {
     TestGroupRunResults {
         name: group.name,
         sub_group_res: group
             .sub_groups
             .into_iter()
-            .map(run_test_sub_group)
+            .map(|sub_g| run_test_sub_group(sub_g, bar))
             .collect(),
     }
 }
 
-fn run_test_sub_group(sub_group: ParsedTestSubGroup) -> TestSubGroupRunResults {
+fn run_test_sub_group(
+    sub_group: ParsedTestSubGroup,
+    bar: &mut ProgressBar,
+) -> TestSubGroupRunResults {
     TestSubGroupRunResults {
         name: sub_group.name,
-        test_res: sub_group.tests.into_iter().map(run_test).collect(),
+        test_res: sub_group
+            .tests
+            .into_iter()
+            .map(|sub_g| run_test(sub_g, bar))
+            .collect(),
     }
 }
 
-fn run_test(test: Test) -> TestRunResult {
+fn run_test(test: Test, bar: &mut ProgressBar) -> TestRunResult {
     trace!("Running test {}...", test.name);
 
+    bar.set_message(test.name.to_string());
     let res = run_test_and_get_test_result(test.info);
+    bar.inc(1);
+
     TestRunResult {
         name: test.name,
         status: res,
