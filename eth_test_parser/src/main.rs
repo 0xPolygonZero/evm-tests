@@ -1,5 +1,4 @@
 use std::io::Write;
-use std::thread;
 use std::{fs::File, path::PathBuf};
 
 use anyhow::Result;
@@ -23,14 +22,15 @@ mod fs_scaffolding;
 mod trie_builder;
 mod utils;
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     init_env_logger();
     let p_args = ProgArgs::parse();
 
-    run(p_args)
+    run(p_args).await
 }
 
-fn run(ProgArgs { no_fetch }: ProgArgs) -> Result<()> {
+async fn run(ProgArgs { no_fetch }: ProgArgs) -> Result<()> {
     if !no_fetch {
         // Fetch most recent test json.
         clone_or_update_remote_tests();
@@ -42,7 +42,7 @@ fn run(ProgArgs { no_fetch }: ProgArgs) -> Result<()> {
     println!("Converting test json to plonky2 generation inputs");
     let generation_inputs_handle =
         get_deserialized_test_bodies()?.map(|(test_dir_entry, test_body)| {
-            thread::spawn(move || {
+            tokio::task::spawn_blocking(move || {
                 (
                     test_dir_entry,
                     serde_cbor::to_vec(&ParsedTest {
@@ -56,7 +56,7 @@ fn run(ProgArgs { no_fetch }: ProgArgs) -> Result<()> {
 
     println!("Writing plonky2 generation input cbor to disk");
     for thread in generation_inputs_handle {
-        let (test_dir_entry, generation_inputs) = thread.join().unwrap();
+        let (test_dir_entry, generation_inputs) = thread.await.unwrap();
         let mut path = PathBuf::from(GENERATION_INPUTS_OUTPUT_DIR).join(
             test_dir_entry
                 .path()
