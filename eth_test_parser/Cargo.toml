@@ -26,3 +26,4 @@ serde_json = "1.0.86"
 serde_with = "2.0.1"
 serde_cbor = "0.11.2"
 tokio = { version = "1.21.2", features = ["full"] }
+futures = "0.3.24"
