@@ -11,7 +11,7 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
-use common::types::{ParsedTest, PARSED_TESTS_EXT};
+use common::types::ParsedTest;
 use log::{debug, info, trace};
 use tokio::{
     fs::{self, read_dir},
@@ -97,10 +97,6 @@ async fn parse_test_sub_group(
 
     while let Some(entry) = read_dirs.next().await {
         let entry = entry?;
-
-        if path.extension().and_then(|os_str| os_str.to_str()) != Some(PARSED_TESTS_EXT) {
-            continue;
-        }
 
         // Reject test if the filter string does not match.
         if let Some(ref filter_str) = filter_str && !path.to_str().map_or(false, |path_str| path_str.contains(filter_str)) {
