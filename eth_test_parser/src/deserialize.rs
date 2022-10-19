@@ -34,71 +34,71 @@ where
 }
 
 #[derive(Deserialize, Debug)]
-struct ByteString(#[serde(with = "serde_bytes")] pub Vec<u8>);
+pub(crate) struct ByteString(#[serde(with = "serde_bytes")] pub(crate) Vec<u8>);
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct Env {
-    current_base_fee: U256,
-    current_coinbase: H160,
-    current_difficulty: U256,
-    current_gas_limit: U256,
-    current_number: U256,
-    current_random: U256,
-    current_timestamp: U256,
-    previous_hash: H256,
+pub(crate) struct Env {
+    pub(crate) current_base_fee: U256,
+    pub(crate) current_coinbase: H160,
+    pub(crate) current_difficulty: U256,
+    pub(crate) current_gas_limit: U256,
+    pub(crate) current_number: U256,
+    pub(crate) current_random: U256,
+    pub(crate) current_timestamp: U256,
+    pub(crate) previous_hash: H256,
 }
 
 #[derive(Deserialize, Debug)]
-struct PostStateIndexes {
-    data: u64,
-    gas: u64,
-    value: u64,
+pub(crate) struct PostStateIndexes {
+    pub(crate) data: u64,
+    pub(crate) gas: u64,
+    pub(crate) value: u64,
 }
 
 #[derive(Deserialize, Debug)]
-struct PostState {
-    hash: H256,
-    indexes: PostStateIndexes,
-    logs: H256,
-    txbytes: ByteString,
+pub(crate) struct PostState {
+    pub(crate) hash: H256,
+    pub(crate) indexes: PostStateIndexes,
+    pub(crate) logs: H256,
+    pub(crate) txbytes: ByteString,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-struct Post {
-    merge: Vec<PostState>,
+pub(crate) struct Post {
+    pub(crate) merge: Vec<PostState>,
 }
 
 #[derive(Deserialize, Debug)]
-struct PreAccount {
-    balance: U256,
-    code: ByteString,
-    nonce: U256,
-    storage: HashMap<U256, U256>,
+pub(crate) struct PreAccount {
+    pub(crate) balance: U256,
+    pub(crate) code: ByteString,
+    pub(crate) nonce: U256,
+    pub(crate) storage: HashMap<U256, U256>,
 }
 
 #[serde_as]
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct Transaction {
-    data: Vec<ByteString>,
-    gas_limit: Vec<U256>,
-    gas_price: Option<U256>,
-    nonce: U256,
-    secret_key: H256,
-    sender: H160,
+pub(crate) struct Transaction {
+    pub(crate) data: Vec<ByteString>,
+    pub(crate) gas_limit: Vec<U256>,
+    pub(crate) gas_price: Option<U256>,
+    pub(crate) nonce: U256,
+    pub(crate) secret_key: H256,
+    pub(crate) sender: H160,
     #[serde_as(as = "NoneAsEmptyString")]
-    to: Option<H160>,
+    pub(crate) to: Option<H160>,
     // Protect against overflow.
     #[serde(deserialize_with = "vec_eth_big_int_u512")]
-    value: Vec<U512>,
+    pub(crate) value: Vec<U512>,
 }
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct TestBody {
-    env: Env,
-    post: Post,
-    transaction: Transaction,
-    pre: HashMap<String, PreAccount>,
+    pub(crate) env: Env,
+    pub(crate) post: Post,
+    pub(crate) transaction: Transaction,
+    pub(crate) pre: HashMap<H160, PreAccount>,
 }
