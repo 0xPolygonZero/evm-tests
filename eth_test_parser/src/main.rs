@@ -5,6 +5,7 @@ use std::{fs::File, path::PathBuf};
 use anyhow::Result;
 use arg_parsing::ProgArgs;
 use clap::Parser;
+use common::types::ParsedTest;
 use common::utils::init_env_logger;
 use fs_scaffolding::prepare_output_dir;
 use trie_builder::get_deserialized_test_bodies;
@@ -44,7 +45,11 @@ fn run(ProgArgs { no_fetch }: ProgArgs) -> Result<()> {
             thread::spawn(move || {
                 (
                     test_dir_entry,
-                    serde_cbor::to_vec(&test_body.into_generation_inputs()).unwrap(),
+                    serde_cbor::to_vec(&ParsedTest {
+                        plonky2_inputs: test_body.into_generation_inputs(),
+                        expected_final_account_states: None,
+                    })
+                    .unwrap(),
                 )
             })
         });
