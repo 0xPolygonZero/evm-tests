@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::Result;
 
-use crate::config::{DESERIALIZED_TEST_OUTPUT_DIR, ETH_TESTS_REPO_LOCAL_PATH, TEST_GROUPS};
+use crate::config::{ETH_TESTS_REPO_LOCAL_PATH, GENERATION_INPUTS_OUTPUT_DIR, TEST_GROUPS};
 
 /// Generate an iterator over the outer test group folders.
 ///
@@ -74,7 +74,7 @@ pub(crate) fn get_test_files() -> Result<impl Iterator<Item = DirEntry>> {
 pub(crate) fn prepare_output_dir() -> Result<()> {
     for dir in get_test_group_sub_dirs()? {
         fs::create_dir_all(
-            PathBuf::from(DESERIALIZED_TEST_OUTPUT_DIR)
+            PathBuf::from(GENERATION_INPUTS_OUTPUT_DIR)
                 .join(dir.path().strip_prefix(ETH_TESTS_REPO_LOCAL_PATH)?),
         )?
     }

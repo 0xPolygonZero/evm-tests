@@ -5,5 +5,5 @@
 .idea/
 .vscode
 
-parsed_tests/
-eth_tests/
+eth_tests
+generation_inputs

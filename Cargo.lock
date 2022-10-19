@@ -540,6 +540,7 @@ dependencies = [
  "rlp-derive",
  "serde",
  "serde_bytes",
+ "serde_cbor",
  "serde_json",
  "serde_with",
 ]
