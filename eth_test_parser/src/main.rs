@@ -7,6 +7,7 @@ use clap::Parser;
 use common::types::ParsedTest;
 use common::utils::init_env_logger;
 use fs_scaffolding::prepare_output_dir;
+use futures::future::join_all;
 use trie_builder::get_deserialized_test_bodies;
 
 use crate::{
@@ -55,8 +56,8 @@ async fn run(ProgArgs { no_fetch }: ProgArgs) -> Result<()> {
         });
 
     println!("Writing plonky2 generation input cbor to disk");
-    for thread in generation_inputs_handle {
-        let (test_dir_entry, generation_inputs) = thread.await.unwrap();
+    for thread in join_all(generation_inputs_handle).await {
+        let (test_dir_entry, generation_inputs) = thread.unwrap();
         let mut path = PathBuf::from(GENERATION_INPUTS_OUTPUT_DIR).join(
             test_dir_entry
                 .path()
