@@ -7,6 +7,6 @@
 
 | name | status |
 |------|--------|
-{% for test in tests %}
+{% for test in tests -%}
 | {{ test.name }} | {{ test.status }} |
 {% endfor %}
