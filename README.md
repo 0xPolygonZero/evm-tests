@@ -29,8 +29,8 @@ cargo run
 Then launch the runner pointing it at the parsed tests directory:
 ```sh
 cd ../evm_test_runner
-cargo run -- -r summary ../eth_test_parser/generation_inputs # For a high-level summary report
-cargo run -- -r test ../eth_test_parser/generation_inputs # For detailed information per test (likely want to use a filter with `-f`)
+cargo run --release -- -r summary ../eth_test_parser/generation_inputs # For a high-level summary report
+cargo run --release -- -r test ../eth_test_parser/generation_inputs # For detailed information per test (likely want to use a filter with `-f`)
 ```
 
 ## Other
