@@ -3,6 +3,7 @@ use plonky2_evm::generation::GenerationInputs;
 use serde::{Deserialize, Serialize};
 
 /// A parsed Ethereum test that is ready to be fed into `Plonky2`.
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ParsedTest {
     pub plonky2_inputs: GenerationInputs,

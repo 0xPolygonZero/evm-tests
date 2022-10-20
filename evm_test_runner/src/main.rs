@@ -2,6 +2,7 @@
 
 use arg_parsing::{ProgArgs, ReportType};
 use clap::Parser;
+use common::utils::init_env_logger;
 use log::info;
 use plonky2_runner::run_plonky2_tests;
 use report_generation::output_test_report_for_terminal;
@@ -16,6 +17,8 @@ mod test_dir_reading;
 
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
+    init_env_logger();
+
     let ProgArgs {
         test_filter,
         report_type,

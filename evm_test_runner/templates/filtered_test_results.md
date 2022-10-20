@@ -5,8 +5,8 @@
 |--------|---|
 | {{ passed_info.num_passed }} / {{ passed_info.tot_tests }} | passed_info.perc_passed |
 
-
-{% for test in tests %}
 | name | status |
-| {{ test.name }} | test.status |
+|------|--------|
+{% for test in tests -%}
+| {{ test.name }} | {{ test.status }} |
 {% endfor %}

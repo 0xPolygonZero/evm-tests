@@ -74,16 +74,13 @@ async fn parse_test_group(
             continue;
         }
 
-        join_set.spawn(parse_test_sub_group(
-            path.join(entry.path()),
-            filter_str.clone(),
-        ));
+        join_set.spawn(parse_test_sub_group(entry.path(), filter_str.clone()));
     }
 
     wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut sub_groups).await?;
 
     Ok(ParsedTestGroup {
-        name: path.to_string_lossy().to_string(),
+        name: get_file_stem(&path)?,
         sub_groups,
     })
 }
@@ -103,7 +100,7 @@ async fn parse_test_sub_group(
             continue;
         }
 
-        join_set.spawn(parse_test(path.join(entry.path())));
+        join_set.spawn(parse_test(entry.path()));
     }
 
     wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut tests).await?;
@@ -118,7 +115,7 @@ async fn parse_test(path: PathBuf) -> anyhow::Result<Test> {
     trace!("Reading in {:?}...", path);
 
     let parsed_test_bytes = fs::read(&path).await?;
-    let parsed_test = serde_json::from_slice(&parsed_test_bytes)
+    let parsed_test = serde_cbor::from_slice(&parsed_test_bytes)
         .unwrap_or_else(|_| panic!("Unable to parse the test {:?} (bad format)", path));
 
     Ok(Test {
@@ -144,7 +141,11 @@ async fn wait_for_task_to_finish_and_push_to_vec<T: 'static>(
 async fn parse_dir_init<T, U>(path: &Path) -> anyhow::Result<(Vec<T>, JoinSet<U>, ReadDirStream)> {
     let output = Vec::new();
     let join_set = JoinSet::new();
-    let read_dirs = ReadDirStream::new(read_dir(path).await?);
+    let read_dirs = ReadDirStream::new(
+        read_dir(path)
+            .await
+            .with_context(|| format!("Creating a directory stream for path {:?}", path))?,
+    );
 
     Ok((output, join_set, read_dirs))
 }
