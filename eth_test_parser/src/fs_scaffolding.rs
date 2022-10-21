@@ -2,13 +2,39 @@
 //! input and output directories.
 use std::{
     fs::{self, DirEntry},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
-use anyhow::Result;
-use common::config::GENERATION_INPUTS_OUTPUT_DIR;
+use anyhow::{anyhow, Result};
+use common::config::GENERATION_INPUTS_DEFAULT_OUTPUT_DIR;
 
 use crate::config::{ETH_TESTS_REPO_LOCAL_PATH, TEST_GROUPS};
+
+/// Get the default parsed test output directory.
+/// We first check if the flat file, `ETH_TEST_PARSER_DEV`, exists
+/// in the current working directory. If so, we assume we're in a development
+/// context, and default to the project root. Otherwise, we cannot make any
+/// assumptions, fall back to the `GENERATION_INPUTS_DEFAULT_OUTPUT_DIR` value.
+pub(crate) fn get_default_out_dir() -> anyhow::Result<PathBuf> {
+    let cwd = std::env::current_dir()?;
+    let mut dev_check_path = cwd.clone();
+    dev_check_path.push("ETH_TEST_PARSER_DEV");
+    if dev_check_path.exists() {
+        let mut out_dir = cwd
+            .parent()
+            .ok_or_else(|| {
+                anyhow!(
+                    "Unable to read cwd path parent. {:?} has no parent.",
+                    cwd.as_os_str()
+                )
+            })?
+            .to_path_buf();
+        out_dir.push(GENERATION_INPUTS_DEFAULT_OUTPUT_DIR);
+        Ok(out_dir)
+    } else {
+        Ok(GENERATION_INPUTS_DEFAULT_OUTPUT_DIR.into())
+    }
+}
 
 /// Generate an iterator over the outer test group folders.
 ///
@@ -72,12 +98,9 @@ pub(crate) fn get_test_files() -> Result<impl Iterator<Item = DirEntry>> {
 
 /// Create output directories mirroring the structure of source test
 /// directories.
-pub(crate) fn prepare_output_dir() -> Result<()> {
+pub(crate) fn prepare_output_dir(out_path: &Path) -> Result<()> {
     for dir in get_test_group_sub_dirs()? {
-        fs::create_dir_all(
-            PathBuf::from(GENERATION_INPUTS_OUTPUT_DIR)
-                .join(dir.path().strip_prefix(ETH_TESTS_REPO_LOCAL_PATH)?),
-        )?
+        fs::create_dir_all(out_path.join(dir.path().strip_prefix(ETH_TESTS_REPO_LOCAL_PATH)?))?
     }
 
     Ok(())

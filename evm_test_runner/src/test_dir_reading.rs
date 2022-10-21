@@ -11,7 +11,7 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context};
-use common::{config::GENERATION_INPUTS_OUTPUT_DIR, types::ParsedTest};
+use common::{config::GENERATION_INPUTS_DEFAULT_OUTPUT_DIR, types::ParsedTest};
 use log::{debug, info, trace};
 use tokio::{
     fs::{self, read_dir},
@@ -42,14 +42,14 @@ pub(crate) fn get_default_parsed_tests_path() -> anyhow::Result<PathBuf> {
         .ancestors()
         .map(|ancestor| {
             let mut buf = ancestor.to_path_buf();
-            buf.push(GENERATION_INPUTS_OUTPUT_DIR);
+            buf.push(GENERATION_INPUTS_DEFAULT_OUTPUT_DIR);
             buf
         })
         .find(|path| path.exists())
         .ok_or_else(|| {
             anyhow!(
-                "Unable to find {} in cwd ancestry.",
-                GENERATION_INPUTS_OUTPUT_DIR
+                "Unable to find {} in cwd ancestry. Have you run the parser binary?",
+                GENERATION_INPUTS_DEFAULT_OUTPUT_DIR
             )
         })
 }

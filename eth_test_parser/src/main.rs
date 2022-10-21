@@ -1,16 +1,16 @@
+use std::fs::File;
 use std::io::Write;
-use std::{fs::File, path::PathBuf};
 
 use anyhow::Result;
 use arg_parsing::ProgArgs;
 use clap::Parser;
-use common::config::GENERATION_INPUTS_OUTPUT_DIR;
 use common::types::ParsedTest;
 use common::utils::init_env_logger;
 use fs_scaffolding::prepare_output_dir;
 use futures::future::join_all;
 use trie_builder::get_deserialized_test_bodies;
 
+use crate::fs_scaffolding::get_default_out_dir;
 use crate::{config::ETH_TESTS_REPO_LOCAL_PATH, eth_tests_fetching::clone_or_update_remote_tests};
 
 mod arg_parsing;
@@ -29,13 +29,15 @@ async fn main() -> Result<()> {
     run(p_args).await
 }
 
-async fn run(ProgArgs { no_fetch }: ProgArgs) -> Result<()> {
+async fn run(ProgArgs { no_fetch, out_path }: ProgArgs) -> anyhow::Result<()> {
+    let out_path = out_path.map(Ok).unwrap_or_else(get_default_out_dir)?;
+
     if !no_fetch {
         // Fetch most recent test json.
         clone_or_update_remote_tests();
 
         // Create output directories mirroring the structure of source tests.
-        prepare_output_dir()?;
+        prepare_output_dir(&out_path)?;
     }
 
     println!("Converting test json to plonky2 generation inputs");
@@ -53,10 +55,13 @@ async fn run(ProgArgs { no_fetch }: ProgArgs) -> Result<()> {
             })
         });
 
-    println!("Writing plonky2 generation input cbor to disk");
+    println!(
+        "Writing plonky2 generation input cbor to disk, {:?}",
+        out_path.as_os_str()
+    );
     for thread in join_all(generation_inputs_handle).await {
         let (test_dir_entry, generation_inputs) = thread.unwrap();
-        let mut path = PathBuf::from(GENERATION_INPUTS_OUTPUT_DIR).join(
+        let mut path = out_path.join(
             test_dir_entry
                 .path()
                 .strip_prefix(ETH_TESTS_REPO_LOCAL_PATH)
