@@ -10,8 +10,8 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::Context;
-use common::types::ParsedTest;
+use anyhow::{anyhow, Context};
+use common::{config::GENERATION_INPUTS_OUTPUT_DIR, types::ParsedTest};
 use log::{debug, info, trace};
 use tokio::{
     fs::{self, read_dir},
@@ -35,6 +35,23 @@ pub(crate) struct ParsedTestSubGroup {
 pub(crate) struct Test {
     pub(crate) name: String,
     pub(crate) info: ParsedTest,
+}
+
+pub(crate) fn get_default_parsed_tests_path() -> anyhow::Result<PathBuf> {
+    std::env::current_dir()?
+        .ancestors()
+        .map(|ancestor| {
+            let mut buf = ancestor.to_path_buf();
+            buf.push(GENERATION_INPUTS_OUTPUT_DIR);
+            buf
+        })
+        .find(|path| path.exists())
+        .ok_or_else(|| {
+            anyhow!(
+                "Unable to find {} in cwd ancestry.",
+                GENERATION_INPUTS_OUTPUT_DIR
+            )
+        })
 }
 
 /// Reads in all parsed tests from the given parsed test directory.

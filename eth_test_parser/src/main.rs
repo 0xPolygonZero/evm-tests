@@ -4,16 +4,14 @@ use std::{fs::File, path::PathBuf};
 use anyhow::Result;
 use arg_parsing::ProgArgs;
 use clap::Parser;
+use common::config::GENERATION_INPUTS_OUTPUT_DIR;
 use common::types::ParsedTest;
 use common::utils::init_env_logger;
 use fs_scaffolding::prepare_output_dir;
 use futures::future::join_all;
 use trie_builder::get_deserialized_test_bodies;
 
-use crate::{
-    config::{ETH_TESTS_REPO_LOCAL_PATH, GENERATION_INPUTS_OUTPUT_DIR},
-    eth_tests_fetching::clone_or_update_remote_tests,
-};
+use crate::{config::ETH_TESTS_REPO_LOCAL_PATH, eth_tests_fetching::clone_or_update_remote_tests};
 
 mod arg_parsing;
 mod config;

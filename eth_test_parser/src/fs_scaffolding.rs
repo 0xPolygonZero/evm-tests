@@ -6,8 +6,9 @@ use std::{
 };
 
 use anyhow::Result;
+use common::config::GENERATION_INPUTS_OUTPUT_DIR;
 
-use crate::config::{ETH_TESTS_REPO_LOCAL_PATH, GENERATION_INPUTS_OUTPUT_DIR, TEST_GROUPS};
+use crate::config::{ETH_TESTS_REPO_LOCAL_PATH, TEST_GROUPS};
 
 /// Generate an iterator over the outer test group folders.
 ///
