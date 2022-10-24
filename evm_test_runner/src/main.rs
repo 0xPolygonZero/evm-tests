@@ -6,7 +6,7 @@ use common::utils::init_env_logger;
 use log::info;
 use plonky2_runner::run_plonky2_tests;
 use report_generation::output_test_report_for_terminal;
-use test_dir_reading::read_in_all_parsed_tests;
+use test_dir_reading::{get_default_parsed_tests_path, read_in_all_parsed_tests};
 
 use crate::report_generation::write_overall_status_report_summary_to_file;
 
@@ -24,6 +24,10 @@ async fn main() -> anyhow::Result<()> {
         report_type,
         parsed_tests_path,
     } = ProgArgs::parse();
+
+    let parsed_tests_path = parsed_tests_path
+        .map(Ok)
+        .unwrap_or_else(get_default_parsed_tests_path)?;
 
     let parsed_tests = read_in_all_parsed_tests(&parsed_tests_path, test_filter.clone()).await?;
     let test_res = run_plonky2_tests(parsed_tests);

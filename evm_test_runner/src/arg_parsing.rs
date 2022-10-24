@@ -18,7 +18,7 @@ pub(crate) enum ReportType {
 #[clap(author, version, about)]
 pub(crate) struct ProgArgs {
     /// The path to the parsed tests directory.
-    pub(crate) parsed_tests_path: PathBuf,
+    pub(crate) parsed_tests_path: Option<PathBuf>,
 
     #[arg(short='r', long, value_enum, default_value_t=ReportType::Test)]
     /// The type of report to generate.
