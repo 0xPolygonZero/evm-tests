@@ -9,13 +9,13 @@ edition = "2021"
 
 [dependencies]
 common = { path = "../common" }
-plonky2 = { git = "https://github.com/mir-protocol/plonky2.git", rev = "06475c2b61a0d3b26d3f3ded791456052b94251b", features = ["timing"] }
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "06475c2b61a0d3b26d3f3ded791456052b94251b" }
+plonky2 = { git = "https://github.com/mir-protocol/plonky2.git", rev = "ea7fbed33a8d132ecc4dc92e9ce49639fdfe3753", features = ["timing"] }
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "ea7fbed33a8d132ecc4dc92e9ce49639fdfe3753" }
 
 anyhow = { version = "1.0", features = ["backtrace"] }
 askama = "0.11.1"
 backtrace = "0.3.66"
-clap = {version = "4.0.14", features = ["derive"] }
+clap = {version = "4.0.19", features = ["derive"] }
 ethereum-types = "0.14.0"
 indicatif = "0.17.1"
 log = "0.4.17"
