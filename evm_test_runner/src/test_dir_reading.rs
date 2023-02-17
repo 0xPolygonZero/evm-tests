@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context};
 use common::{config::GENERATION_INPUTS_DEFAULT_OUTPUT_DIR, types::ParsedTest};
-use log::{debug, info, trace};
+use log::{info, trace};
 use tokio::{
     fs::{self, read_dir},
     task::JoinSet,
@@ -106,7 +106,7 @@ async fn parse_test_sub_group(
     path: PathBuf,
     filter_str: Option<String>,
 ) -> anyhow::Result<ParsedTestSubGroup> {
-    debug!("Reading in test subgroup {:?}...", path);
+    trace!("Reading in test subgroup {:?}...", path);
     let (mut tests, mut join_set, mut read_dirs) = parse_dir_init(&path).await?;
 
     while let Some(entry) = read_dirs.next().await {
