@@ -1,7 +1,7 @@
 //! Handles feeding the parsed tests into `plonky2` and determining the result.
 //! Essentially converts parsed tests into test results.
 
-use std::{cell::RefCell, fmt::Display, panic};
+use std::{cell::RefCell, fmt::Display, panic, time::Duration};
 
 use backtrace::Backtrace;
 use common::types::ParsedTest;
@@ -183,12 +183,17 @@ fn run_test(test: Test, bar: &mut ProgressBar) -> TestRunResult {
 /// Run a test against `plonky2` and output a result based on what happens.
 fn run_test_and_get_test_result(test: ParsedTest) -> TestStatus {
     let proof_run_res = panic::catch_unwind(|| {
-        prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
+        let timing = TimingTree::new("prove", log::Level::Debug);
+
+        let res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
             &AllStark::default(),
             &StarkConfig::standard_fast_config(),
             test.plonky2_inputs,
             &mut TimingTree::default(),
-        )
+        );
+
+        timing.filter(Duration::from_millis(100)).print();
+        res
     });
 
     let proof_run_output = match proof_run_res {
