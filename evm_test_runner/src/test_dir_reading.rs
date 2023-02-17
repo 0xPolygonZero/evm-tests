@@ -111,13 +111,14 @@ async fn parse_test_sub_group(
 
     while let Some(entry) = read_dirs.next().await {
         let entry = entry?;
+        let file_path = entry.path();
 
         // Reject test if the filter string does not match.
-        if let Some(ref filter_str) = filter_str && !path.to_str().map_or(false, |path_str| path_str.contains(filter_str)) {
+        if let Some(ref filter_str) = filter_str && !file_path.to_str().map_or(false, |path_str| path_str.contains(filter_str)) {
             continue;
         }
 
-        join_set.spawn(parse_test(entry.path()));
+        join_set.spawn(parse_test(file_path));
     }
 
     wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut tests).await?;
