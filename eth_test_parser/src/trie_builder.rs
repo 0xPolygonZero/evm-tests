@@ -75,7 +75,8 @@ impl TestBody {
 
         let tries = TrieInputs {
             state_trie,
-            transactions_trie: self.get_txn_trie(),
+            transactions_trie: PartialTrie::Empty, /* TODO: Change to self.get_txn_trie() once
+                                                    * zkEVM supports it */
             receipts_trie: PartialTrie::Empty, // TODO: Fill in once we know what we are doing...
             storage_tries,
         };
@@ -139,6 +140,7 @@ impl TestBody {
             .collect()
     }
 
+    #[allow(unused)] // TODO: Will be used later.
     fn get_txn_trie(&self) -> PartialTrie {
         self.post
             .merge

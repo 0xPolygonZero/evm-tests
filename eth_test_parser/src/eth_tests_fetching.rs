@@ -17,7 +17,12 @@ pub(crate) fn clone_or_update_remote_tests() {
 
 fn update_remote_tests() {
     println!("Pulling for the most recent changes for the Ethereum tests repo...");
-    run_cmd(Command::new("git").arg("pull")).unwrap();
+    run_cmd(
+        Command::new("git")
+            .arg("pull")
+            .current_dir(ETH_TESTS_REPO_LOCAL_PATH),
+    )
+    .unwrap();
 }
 
 fn download_remote_tests() {
