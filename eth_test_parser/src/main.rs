@@ -8,6 +8,7 @@ use common::types::ParsedTest;
 use common::utils::init_env_logger;
 use fs_scaffolding::prepare_output_dir;
 use futures::future::join_all;
+use log::warn;
 use trie_builder::get_deserialized_test_bodies;
 
 use crate::fs_scaffolding::get_default_out_dir;
@@ -41,9 +42,10 @@ async fn run(ProgArgs { no_fetch, out_path }: ProgArgs) -> anyhow::Result<()> {
     }
 
     println!("Converting test json to plonky2 generation inputs");
-    let generation_inputs_handle =
-        get_deserialized_test_bodies()?.map(|(test_dir_entry, test_body)| {
-            tokio::task::spawn_blocking(move || {
+
+    let generation_input_handles = get_deserialized_test_bodies()?.filter_map(|res| {
+        match res {
+            Ok((test_dir_entry, test_body)) => Some(tokio::task::spawn_blocking(move || {
                 (
                     test_dir_entry,
                     serde_cbor::to_vec(&ParsedTest {
@@ -52,14 +54,25 @@ async fn run(ProgArgs { no_fetch, out_path }: ProgArgs) -> anyhow::Result<()> {
                     })
                     .unwrap(),
                 )
-            })
-        });
+            })),
+            Err((err, path_str)) => {
+                // Skip any errors in parsing a test. As the upstream repo changes, we may get
+                // tests that start to fail (eg. some tests do not have a `merge` field).
+                warn!(
+                    "Unable to parse test {} due to error: {}. Skipping!",
+                    path_str, err
+                );
+                None
+            }
+        }
+    });
 
     println!(
         "Writing plonky2 generation input cbor to disk, {:?}",
         out_path.as_os_str()
     );
-    for thread in join_all(generation_inputs_handle).await {
+
+    for thread in join_all(generation_input_handles).await {
         let (test_dir_entry, generation_inputs) = thread.unwrap();
         let mut path = out_path.join(
             test_dir_entry
