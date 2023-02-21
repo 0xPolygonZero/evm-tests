@@ -29,10 +29,10 @@ use crate::{
 
 #[derive(RlpDecodable, RlpEncodable)]
 pub(crate) struct AccountRlp {
-    balance: U256,
     nonce: U256,
-    code_hash: H256,
+    balance: U256,
     storage_hash: H256,
+    code_hash: H256,
 }
 
 /// Generate an iterator containing the deserialized test bodies (`TestBody`)
@@ -135,10 +135,10 @@ impl TestBody {
                     get_pre_account_hashes(acc_key, pre_acc, storage_tries);
 
                 let rlp = AccountRlp {
-                    balance: pre_acc.balance,
                     nonce: pre_acc.nonce,
-                    code_hash,
+                    balance: pre_acc.balance,
                     storage_hash,
+                    code_hash,
                 }
                 .rlp_bytes();
 
