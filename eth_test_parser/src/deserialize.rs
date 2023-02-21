@@ -3,7 +3,11 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use ethereum_types::{H160, H256, U256, U512};
-use serde::{de::Error, Deserialize, Deserializer};
+use hex::FromHex;
+use serde::{
+    de::{Error, Visitor},
+    Deserialize, Deserializer,
+};
 use serde_with::{serde_as, NoneAsEmptyString};
 
 /// In a couple tests, an entry in the `transaction.value` key will contain
@@ -34,7 +38,44 @@ where
 }
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct ByteString(#[serde(with = "serde_bytes")] pub(crate) Vec<u8>);
+// "self" just points to this module.
+pub(crate) struct ByteString(#[serde(with = "self")] pub(crate) Vec<u8>);
+
+// Gross, but there is no Serde crate that can both parse a hex string with a
+// prefix and also deserialize from a `Vec<u8>`.
+pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, D::Error> {
+    struct PrefixHexStrVisitor();
+
+    impl<'de> Visitor<'de> for PrefixHexStrVisitor {
+        type Value = Vec<u8>;
+
+        fn visit_str<E>(self, data: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            FromHex::from_hex(Self::remove_prefix(data)).map_err(Error::custom)
+        }
+
+        fn visit_borrowed_str<E>(self, data: &'de str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            FromHex::from_hex(Self::remove_prefix(data)).map_err(Error::custom)
+        }
+
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "a hex encoded string with a prefix")
+        }
+    }
+
+    impl PrefixHexStrVisitor {
+        fn remove_prefix(data: &str) -> &str {
+            &data[2..]
+        }
+    }
+
+    deserializer.deserialize_string(PrefixHexStrVisitor())
+}
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -101,4 +142,22 @@ pub(crate) struct TestBody {
     pub(crate) post: Post,
     pub(crate) transaction: Transaction,
     pub(crate) pre: HashMap<H160, PreAccount>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ByteString;
+
+    const TEST_HEX_STR: &str = "\"0xf863800a83061a8094095e7baea6a6c7c4c2dfeb977efac326af552d87830186a0801ba0ffb600e63115a7362e7811894a91d8ba4330e526f22121c994c4692035dfdfd5a06198379fcac8de3dbfac48b165df4bf88e2088f294b61efb9a65fe2281c76e16\"";
+
+    #[test]
+    fn deserialize_hex_str_works() {
+        let byte_str: ByteString = serde_json::from_str(TEST_HEX_STR).unwrap();
+
+        assert_eq!(byte_str.0[0], 0xf8);
+        assert_eq!(byte_str.0[1], 0x63);
+
+        assert_eq!(byte_str.0[byte_str.0.len() - 1], 0x16);
+        assert_eq!(byte_str.0[byte_str.0.len() - 2], 0x6e);
+    }
 }
