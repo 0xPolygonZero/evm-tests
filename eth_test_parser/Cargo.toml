@@ -15,7 +15,7 @@ plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "6f2d
 anyhow = { version = "1.0.66", features = ["backtrace"] }
 clap = {version = "4.0.19", features = ["derive"] }
 ethereum-types = "0.14.0"
-hex = "0.4.3"
+hex = { version = "0.4.3", features = ["serde"] }
 keccak-hash = "0.10.0"
 log = "0.4.17"
 rlp = "0.5.2"

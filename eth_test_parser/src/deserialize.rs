@@ -3,7 +3,11 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use ethereum_types::{H160, H256, U256, U512};
-use serde::{de::Error, Deserialize, Deserializer};
+use hex::FromHex;
+use serde::{
+    de::{Error, Visitor},
+    Deserialize, Deserializer,
+};
 use serde_with::{serde_as, NoneAsEmptyString};
 
 /// In a couple tests, an entry in the `transaction.value` key will contain
@@ -34,7 +38,42 @@ where
 }
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct ByteString(#[serde(with = "serde_bytes")] pub(crate) Vec<u8>);
+// "self" just points to this module.
+pub(crate) struct ByteString(#[serde(with = "self")] pub(crate) Vec<u8>);
+
+pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>, D::Error> {
+    struct PrefixHexStrVisitor();
+
+    impl<'de> Visitor<'de> for PrefixHexStrVisitor {
+        type Value = Vec<u8>;
+
+        fn visit_str<E>(self, data: &str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            FromHex::from_hex(Self::remove_prefix(data)).map_err(Error::custom)
+        }
+
+        fn visit_borrowed_str<E>(self, data: &'de str) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            FromHex::from_hex(Self::remove_prefix(data)).map_err(Error::custom)
+        }
+
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "a hex encoded string with a prefix")
+        }
+    }
+
+    impl PrefixHexStrVisitor {
+        fn remove_prefix(data: &str) -> &str {
+            &data[2..]
+        }
+    }
+
+    deserializer.deserialize_string(PrefixHexStrVisitor())
+}
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
