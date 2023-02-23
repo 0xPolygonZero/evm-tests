@@ -118,8 +118,10 @@ pub(crate) struct TestRunResult {
 pub(crate) fn run_plonky2_tests(parsed_tests: Vec<ParsedTestGroup>) -> Vec<TestGroupRunResults> {
     let num_tests = num_tests_in_groups(parsed_tests.iter());
     let mut prog_bar = ProgressBar::new(num_tests).with_style(
-        ProgressStyle::with_template("ETA: [{eta_precise}] | Test: {msg}\n{wide_bar} {pos}/{len}")
-            .unwrap(),
+        ProgressStyle::with_template(
+            "{bar:60.magenta} {pos}/{len} ETA: [{eta_precise}] | Test: {msg}",
+        )
+        .unwrap(),
     );
 
     let orig_panic_hook = panic::take_hook();
