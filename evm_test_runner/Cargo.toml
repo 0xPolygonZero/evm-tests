@@ -17,6 +17,7 @@ askama = "0.11.1"
 backtrace = "0.3.66"
 clap = {version = "4.0.19", features = ["derive"] }
 ethereum-types = "0.14.0"
+flexi_logger = { version = "0.25.1", features = ["async"] }
 indicatif = "0.17.1"
 log = "0.4.17"
 serde_cbor = "0.11.2"

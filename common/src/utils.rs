@@ -1,6 +1,4 @@
-use std::env;
-
-use pretty_env_logger::env_logger::DEFAULT_FILTER_ENV;
+use flexi_logger::Logger;
 
 #[macro_export]
 macro_rules! unwrap_or_continue {
@@ -23,12 +21,7 @@ macro_rules! unwrap_or_return {
 }
 
 pub fn init_env_logger() {
-    // So verbose... Why?
-    let level = env::var(DEFAULT_FILTER_ENV)
-        .ok()
-        .unwrap_or_else(|| "plonky2::util::timing=info".to_string());
-
-    let _ = pretty_env_logger::formatted_builder()
-        .parse_filters(&level)
-        .try_init();
+    let _ = Logger::try_with_env_or_str("plonky2::util::timing=info")
+        .unwrap()
+        .start();
 }

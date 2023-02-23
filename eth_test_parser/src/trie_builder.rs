@@ -115,7 +115,7 @@ impl TestBody {
                     .iter()
                     .map(|(k, v)| {
                         (
-                            Nibbles::from(hash(&u256_to_be_bytes(*k))),
+                            Nibbles::from_h256_be(hash(&u256_to_be_bytes(*k))),
                             v.rlp_bytes().to_vec(),
                         )
                     })
@@ -142,7 +142,7 @@ impl TestBody {
                 }
                 .rlp_bytes();
 
-                (addr_hash, rlp.to_vec())
+                (Nibbles::from_h256_be(addr_hash), rlp.to_vec())
             })
             .collect()
     }

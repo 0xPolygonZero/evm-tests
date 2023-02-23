@@ -8,9 +8,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-eth_trie_utils = "0.4.0"
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "6f2d99c7bce0728aff0374cf6bddff6c08b409ba" }
-
 ethereum-types = "0.14.0"
-pretty_env_logger = "0.4.0"
+eth_trie_utils = "0.4.1"
+flexi_logger = { version = "0.25.1", features = ["async"] }
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "6f2d99c7bce0728aff0374cf6bddff6c08b409ba" }
 serde = {version = "1.0.147", features = ["derive"] }
