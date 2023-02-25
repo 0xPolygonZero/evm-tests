@@ -90,8 +90,8 @@ impl TestBody {
 
         let contract_code: HashMap<_, _> = self
             .pre
-            .into_iter()
-            .map(|(_, pre)| (hash(&pre.code.0), pre.code.0.clone()))
+            .into_values()
+            .map(|pre| (hash(&pre.code.0), pre.code.0.clone()))
             .collect();
 
         let signed_txns: Vec<Vec<_>> = self.post.merge.into_iter().map(|x| x.txbytes.0).collect();
