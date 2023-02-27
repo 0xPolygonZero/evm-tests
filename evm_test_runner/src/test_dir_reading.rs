@@ -11,7 +11,10 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context};
-use common::{config::GENERATION_INPUTS_DEFAULT_OUTPUT_DIR, types::ParsedTest};
+use common::{
+    config::GENERATION_INPUTS_DEFAULT_OUTPUT_DIR,
+    types::{ParsedTest, TestVariantRunInfo},
+};
 use log::{info, trace};
 use tokio::{
     fs::{self, read_dir},
@@ -34,7 +37,7 @@ pub(crate) struct ParsedTestSubGroup {
 #[derive(Debug)]
 pub(crate) struct Test {
     pub(crate) name: String,
-    pub(crate) info: ParsedTest,
+    pub(crate) info: TestVariantRunInfo,
 }
 
 pub(crate) fn get_default_parsed_tests_path() -> anyhow::Result<PathBuf> {
@@ -121,7 +124,7 @@ async fn parse_test_sub_group(
         join_set.spawn(parse_test(file_path));
     }
 
-    wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut tests).await?;
+    wait_for_task_to_finish_and_extend_vec(&mut join_set, &mut tests).await?;
 
     Ok(ParsedTestSubGroup {
         name: get_file_stem(&path)?,
@@ -129,25 +132,64 @@ async fn parse_test_sub_group(
     })
 }
 
-async fn parse_test(path: PathBuf) -> anyhow::Result<Test> {
+async fn parse_test(path: PathBuf) -> anyhow::Result<Vec<Test>> {
     trace!("Reading in {:?}...", path);
 
     let parsed_test_bytes = fs::read(&path).await?;
-    let parsed_test = serde_cbor::from_slice(&parsed_test_bytes)
+    let parsed_test: ParsedTest = serde_cbor::from_slice(&parsed_test_bytes)
         .unwrap_or_else(|_| panic!("Unable to parse the test {:?} (bad format)", path));
 
-    Ok(Test {
-        name: get_file_stem(&path)?,
-        info: parsed_test,
-    })
+    let test_variants = parsed_test.get_test_variants();
+
+    let root_test_name = get_file_stem(&path)?;
+    let t_name_f: Box<dyn Fn(usize) -> String> = match test_variants.len() {
+        1 => Box::new(|_| root_test_name.clone()),
+        _ => Box::new(|i| format!("{}_{}", root_test_name, i)),
+    };
+
+    Ok(test_variants
+        .into_iter()
+        .enumerate()
+        .map(|(i, info)| Test {
+            name: t_name_f(i),
+            info,
+        })
+        .collect())
 }
 
 async fn wait_for_task_to_finish_and_push_to_vec<T: 'static>(
     join_set: &mut JoinSet<anyhow::Result<T>>,
     out_vec: &mut Vec<T>,
 ) -> anyhow::Result<()> {
+    wait_for_task_to_finish_and_apply_elem_to_vec(join_set, out_vec, |v, elem| v.push(elem)).await
+}
+
+async fn wait_for_task_to_finish_and_extend_vec<T: 'static>(
+    join_set: &mut JoinSet<anyhow::Result<Vec<T>>>,
+    out_vec: &mut Vec<T>,
+) -> anyhow::Result<()> {
+    wait_for_task_to_finish_and_apply_elem_to_vec(
+        join_set,
+        out_vec,
+        |v: &mut Vec<T>, elems: Vec<T>| v.extend(elems.into_iter()),
+    )
+    .await
+}
+
+async fn wait_for_task_to_finish_and_apply_elem_to_vec<
+    T: 'static,
+    U: 'static,
+    F: Fn(&mut Vec<T>, U),
+>(
+    join_set: &mut JoinSet<anyhow::Result<U>>,
+    out_vec: &mut Vec<T>,
+    apply_f: F,
+) -> anyhow::Result<()> {
     while let Some(h) = join_set.join_next().await {
-        out_vec.push(h.with_context(|| "Getting the result from a join vec")??);
+        apply_f(
+            out_vec,
+            h.with_context(|| "Getting the result from a join vec")??,
+        );
     }
 
     Ok(())

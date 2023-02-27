@@ -12,13 +12,11 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
+use common::types::{ConstGenerationInputs, ParsedTest, TestVariant, TestVariantCommon};
 use eth_trie_utils::partial_trie::{Nibbles, PartialTrie};
 use ethereum_types::{H160, H256, U256};
 use keccak_hash::keccak;
-use plonky2_evm::{
-    generation::{GenerationInputs, TrieInputs},
-    proof::BlockMetadata,
-};
+use plonky2_evm::{generation::TrieInputs, proof::BlockMetadata};
 use rlp::Encodable;
 use rlp_derive::{RlpDecodable, RlpEncodable};
 
@@ -76,7 +74,7 @@ impl Env {
 }
 
 impl TestBody {
-    pub fn into_generation_inputs(self) -> GenerationInputs {
+    pub fn into_parsed_test(self) -> ParsedTest {
         let storage_tries = self.get_storage_tries();
         let state_trie = self.get_state_trie(&storage_tries);
 
@@ -94,13 +92,27 @@ impl TestBody {
             .map(|pre| (hash(&pre.code.0), pre.code.0.clone()))
             .collect();
 
-        let signed_txns: Vec<Vec<_>> = self.post.merge.into_iter().map(|x| x.txbytes.0).collect();
+        let test_variants = self
+            .post
+            .merge
+            .into_iter()
+            .map(|x| TestVariant {
+                txn_bytes: x.txbytes.0,
+                common: TestVariantCommon {
+                    expected_final_account_state_root_hash: x.hash,
+                },
+            })
+            .collect();
 
-        GenerationInputs {
-            signed_txns,
+        let const_plonky2_inputs = ConstGenerationInputs {
             tries,
             contract_code,
             block_metadata: self.env.block_metadata(),
+        };
+
+        ParsedTest {
+            test_variants,
+            const_plonky2_inputs,
         }
     }
 
@@ -161,9 +173,9 @@ impl TestBody {
     }
 }
 
-impl From<TestBody> for GenerationInputs {
+impl From<TestBody> for ParsedTest {
     fn from(test_body: TestBody) -> Self {
-        test_body.into_generation_inputs()
+        test_body.into_parsed_test()
     }
 }
 

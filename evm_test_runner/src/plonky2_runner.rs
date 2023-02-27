@@ -4,7 +4,7 @@
 use std::{cell::RefCell, fmt::Display, panic, time::Duration};
 
 use backtrace::Backtrace;
-use common::types::ParsedTest;
+use common::types::TestVariantRunInfo;
 use ethereum_types::H256;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::trace;
@@ -183,14 +183,14 @@ fn run_test(test: Test, bar: &mut ProgressBar) -> TestRunResult {
 }
 
 /// Run a test against `plonky2` and output a result based on what happens.
-fn run_test_and_get_test_result(test: ParsedTest) -> TestStatus {
+fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     let proof_run_res = panic::catch_unwind(|| {
         let timing = TimingTree::new("prove", log::Level::Debug);
 
         let res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
             &AllStark::default(),
             &StarkConfig::standard_fast_config(),
-            test.plonky2_inputs,
+            test.gen_inputs,
             &mut TimingTree::default(),
         );
 
@@ -217,14 +217,17 @@ fn run_test_and_get_test_result(test: ParsedTest) -> TestStatus {
 
     let actual_state_trie_hash = proof_run_output.public_values.trie_roots_after.state_root;
 
-    if let Some(expected_state_trie_hash) = test.expected_final_account_states && actual_state_trie_hash != expected_state_trie_hash {
+    if actual_state_trie_hash != test.common.expected_final_account_state_root_hash {
         let trie_diff = TrieFinalStateDiff {
-            state: TrieComparisonResult::Difference(actual_state_trie_hash, expected_state_trie_hash),
+            state: TrieComparisonResult::Difference(
+                actual_state_trie_hash,
+                test.common.expected_final_account_state_root_hash,
+            ),
             receipt: TrieComparisonResult::Correct, // TODO...
             transaction: TrieComparisonResult::Correct, // TODO...
         };
 
-        return TestStatus::IncorrectAccountFinalState(trie_diff)
+        return TestStatus::IncorrectAccountFinalState(trie_diff);
     }
 
     // TODO: Also check receipt and txn hashes once these are provided by the

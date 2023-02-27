@@ -4,7 +4,6 @@ use std::io::Write;
 use anyhow::Result;
 use arg_parsing::ProgArgs;
 use clap::Parser;
-use common::types::ParsedTest;
 use common::utils::init_env_logger;
 use fs_scaffolding::prepare_output_dir;
 use futures::future::join_all;
@@ -46,17 +45,8 @@ async fn run(ProgArgs { no_fetch, out_path }: ProgArgs) -> anyhow::Result<()> {
     let generation_input_handles = get_deserialized_test_bodies()?.filter_map(|res| {
         match res {
             Ok((test_dir_entry, test_body)) => Some(tokio::task::spawn_blocking(move || {
-                // TODO: For now if there are multiple txn variants, we're just going to pick
-                // the first one. Later we will switch to processing all txns in the test.
-                let state_trie_hash = test_body.post.merge[0].hash;
-                (
-                    test_dir_entry,
-                    serde_cbor::to_vec(&ParsedTest {
-                        plonky2_inputs: test_body.into_generation_inputs(),
-                        expected_final_account_states: Some(state_trie_hash),
-                    })
-                    .unwrap(),
-                )
+                let parsed_test = test_body.into_parsed_test();
+                (test_dir_entry, serde_cbor::to_vec(&parsed_test).unwrap())
             })),
             Err((err, path_str)) => {
                 // Skip any errors in parsing a test. As the upstream repo changes, we may get
