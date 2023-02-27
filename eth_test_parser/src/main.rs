@@ -46,11 +46,14 @@ async fn run(ProgArgs { no_fetch, out_path }: ProgArgs) -> anyhow::Result<()> {
     let generation_input_handles = get_deserialized_test_bodies()?.filter_map(|res| {
         match res {
             Ok((test_dir_entry, test_body)) => Some(tokio::task::spawn_blocking(move || {
+                // TODO: For now if there are multiple txns, we are just going to process the
+                // first one. Later we will switch to processing all txns in the text.
+                let state_trie_hash = test_body.post.merge[0].hash;
                 (
                     test_dir_entry,
                     serde_cbor::to_vec(&ParsedTest {
                         plonky2_inputs: test_body.into_generation_inputs(),
-                        expected_final_account_states: None,
+                        expected_final_account_states: Some(state_trie_hash),
                     })
                     .unwrap(),
                 )
