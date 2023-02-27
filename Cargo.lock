@@ -1509,7 +1509,7 @@ dependencies = [
 [[package]]
 name = "plonky2_evm"
 version = "0.1.0"
-source = "git+https://github.com/mir-protocol/plonky2.git?rev=6f2d99c7bce0728aff0374cf6bddff6c08b409ba#6f2d99c7bce0728aff0374cf6bddff6c08b409ba"
+source = "git+https://github.com/mir-protocol/plonky2.git?rev=5aafbaad491b89805b649650131ab80ee8c79605#5aafbaad491b89805b649650131ab80ee8c79605"
 dependencies = [
  "anyhow",
  "blake2",

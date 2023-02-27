@@ -11,5 +11,5 @@ edition = "2021"
 ethereum-types = "0.14.0"
 eth_trie_utils = "0.4.1"
 flexi_logger = { version = "0.25.1", features = ["async"] }
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "6f2d99c7bce0728aff0374cf6bddff6c08b409ba" }
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "5aafbaad491b89805b649650131ab80ee8c79605" }
 serde = {version = "1.0.147", features = ["derive"] }
