@@ -46,8 +46,8 @@ async fn run(ProgArgs { no_fetch, out_path }: ProgArgs) -> anyhow::Result<()> {
     let generation_input_handles = get_deserialized_test_bodies()?.filter_map(|res| {
         match res {
             Ok((test_dir_entry, test_body)) => Some(tokio::task::spawn_blocking(move || {
-                // TODO: For now if there are multiple txns, we are just going to process the
-                // first one. Later we will switch to processing all txns in the text.
+                // TODO: For now if there are multiple txn variants, we're just going to pick
+                // the first one. Later we will switch to processing all txns in the test.
                 let state_trie_hash = test_body.post.merge[0].hash;
                 (
                     test_dir_entry,
