@@ -22,6 +22,7 @@ async fn main() -> anyhow::Result<()> {
     let ProgArgs {
         test_filter,
         report_type,
+        variant_filter: _,
         parsed_tests_path,
     } = ProgArgs::parse();
 
