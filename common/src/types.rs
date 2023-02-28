@@ -1,5 +1,10 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    ops::RangeInclusive,
+    str::{FromStr, Split},
+};
 
+use anyhow::{anyhow, Context};
 use ethereum_types::H256;
 use plonky2_evm::{
     generation::{GenerationInputs, TrieInputs},
@@ -20,10 +25,19 @@ pub struct ParsedTest {
 
 impl ParsedTest {
     /// Construct the actual test variants for the test.
-    pub fn get_test_variants(self) -> Vec<TestVariantRunInfo> {
+    pub fn get_test_variants_with_variant_filter(
+        self,
+        v_filter: Option<VariantFilterType>,
+    ) -> Vec<TestVariantRunInfo> {
         self.test_variants
             .into_iter()
-            .map(|t_var| {
+            .enumerate()
+            .filter(|(variant_idx, _)| match &v_filter {
+                Some(VariantFilterType::Single(v)) => variant_idx == v,
+                Some(VariantFilterType::Range(r)) => r.contains(variant_idx),
+                None => true,
+            })
+            .map(|(_, t_var)| {
                 let gen_inputs = GenerationInputs {
                     signed_txns: vec![t_var.txn_bytes],
                     tries: self.const_plonky2_inputs.tries.clone(),
@@ -65,4 +79,59 @@ pub struct ConstGenerationInputs {
     pub tries: TrieInputs,
     pub contract_code: HashMap<H256, Vec<u8>>,
     pub block_metadata: BlockMetadata,
+}
+
+#[derive(Clone, Debug)]
+pub enum VariantFilterType {
+    Single(usize),
+    Range(RangeInclusive<usize>),
+}
+
+impl FromStr for VariantFilterType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_str_intern(s)
+            .with_context(|| {
+                format!(
+                    "Expected a single value or a range, but instead got \"{}\".",
+                    s
+                )
+            })
+            .map_err(|e| format!("{e:#}"))
+    }
+}
+
+impl VariantFilterType {
+    fn from_str_intern(s: &str) -> anyhow::Result<Self> {
+        // Did we get passed a single value?
+        if let Ok(v) = s.parse::<usize>() {
+            return Ok(Self::Single(v));
+        }
+
+        // Check if it's a range.
+        let mut range_vals = s.split("..=");
+
+        let start = Self::next_and_try_parse(&mut range_vals)?;
+        let end = Self::next_and_try_parse(&mut range_vals)?;
+
+        if range_vals.count() > 0 {
+            return Err(anyhow!(
+                "Parsed a range but there were unexpected characters afterwards!"
+            ));
+        }
+
+        Ok(Self::Range(start..=end))
+    }
+
+    fn next_and_try_parse(range_vals: &mut Split<&str>) -> anyhow::Result<usize> {
+        let unparsed_val = range_vals
+            .next()
+            .with_context(|| "Parsing a value as a `RangeInclusive`")?;
+        let res = unparsed_val
+            .parse()
+            .with_context(|| format!("Parsing the range val \"{unparsed_val}\" into a usize"))?;
+
+        Ok(res)
+    }
 }

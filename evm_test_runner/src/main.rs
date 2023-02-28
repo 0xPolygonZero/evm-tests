@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
     let ProgArgs {
         test_filter,
         report_type,
-        variant_filter: _,
+        variant_filter,
         parsed_tests_path,
     } = ProgArgs::parse();
 
@@ -30,7 +30,8 @@ async fn main() -> anyhow::Result<()> {
         .map(Ok)
         .unwrap_or_else(get_default_parsed_tests_path)?;
 
-    let parsed_tests = read_in_all_parsed_tests(&parsed_tests_path, test_filter.clone()).await?;
+    let parsed_tests =
+        read_in_all_parsed_tests(&parsed_tests_path, test_filter.clone(), variant_filter).await?;
     let test_res = run_plonky2_tests(parsed_tests);
 
     match report_type {

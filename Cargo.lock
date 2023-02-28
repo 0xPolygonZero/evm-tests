@@ -284,6 +284,7 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "eth_trie_utils",
  "ethereum-types",
  "flexi_logger",

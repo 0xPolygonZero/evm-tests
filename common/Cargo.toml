@@ -8,6 +8,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = { version = "1.0.66", features = ["backtrace"] }
 ethereum-types = "0.14.0"
 eth_trie_utils = "0.4.1"
 flexi_logger = { version = "0.25.1", features = ["async"] }

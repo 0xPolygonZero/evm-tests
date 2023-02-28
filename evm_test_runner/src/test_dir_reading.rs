@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context};
 use common::{
     config::GENERATION_INPUTS_DEFAULT_OUTPUT_DIR,
-    types::{ParsedTest, TestVariantRunInfo},
+    types::{ParsedTest, TestVariantRunInfo, VariantFilterType},
 };
 use log::{info, trace};
 use tokio::{
@@ -61,6 +61,7 @@ pub(crate) fn get_default_parsed_tests_path() -> anyhow::Result<PathBuf> {
 pub(crate) async fn read_in_all_parsed_tests(
     parsed_tests_path: &Path,
     filter_str: Option<String>,
+    variant_filter: Option<VariantFilterType>,
 ) -> anyhow::Result<Vec<ParsedTestGroup>> {
     let (mut groups, mut join_set, mut read_dirs) =
         parse_dir_init(Path::new(parsed_tests_path)).await?;
@@ -72,7 +73,11 @@ pub(crate) async fn read_in_all_parsed_tests(
             continue;
         }
 
-        join_set.spawn(parse_test_group(entry.path(), filter_str.clone()));
+        join_set.spawn(parse_test_group(
+            entry.path(),
+            filter_str.clone(),
+            variant_filter.clone(),
+        ));
     }
 
     wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut groups).await?;
@@ -83,6 +88,7 @@ pub(crate) async fn read_in_all_parsed_tests(
 async fn parse_test_group(
     path: PathBuf,
     filter_str: Option<String>,
+    variant_filter: Option<VariantFilterType>,
 ) -> anyhow::Result<ParsedTestGroup> {
     info!("Reading in test group {:?}...", path);
     let (mut sub_groups, mut join_set, mut read_dirs) = parse_dir_init(&path).await?;
@@ -94,7 +100,11 @@ async fn parse_test_group(
             continue;
         }
 
-        join_set.spawn(parse_test_sub_group(entry.path(), filter_str.clone()));
+        join_set.spawn(parse_test_sub_group(
+            entry.path(),
+            filter_str.clone(),
+            variant_filter.clone(),
+        ));
     }
 
     wait_for_task_to_finish_and_push_to_vec(&mut join_set, &mut sub_groups).await?;
@@ -108,6 +118,7 @@ async fn parse_test_group(
 async fn parse_test_sub_group(
     path: PathBuf,
     filter_str: Option<String>,
+    variant_filter: Option<VariantFilterType>,
 ) -> anyhow::Result<ParsedTestSubGroup> {
     trace!("Reading in test subgroup {:?}...", path);
     let (mut tests, mut join_set, mut read_dirs) = parse_dir_init(&path).await?;
@@ -121,7 +132,7 @@ async fn parse_test_sub_group(
             continue;
         }
 
-        join_set.spawn(parse_test(file_path));
+        join_set.spawn(parse_test(file_path, variant_filter.clone()));
     }
 
     wait_for_task_to_finish_and_extend_vec(&mut join_set, &mut tests).await?;
@@ -132,14 +143,17 @@ async fn parse_test_sub_group(
     })
 }
 
-async fn parse_test(path: PathBuf) -> anyhow::Result<Vec<Test>> {
+async fn parse_test(
+    path: PathBuf,
+    variant_filter: Option<VariantFilterType>,
+) -> anyhow::Result<Vec<Test>> {
     trace!("Reading in {:?}...", path);
 
     let parsed_test_bytes = fs::read(&path).await?;
     let parsed_test: ParsedTest = serde_cbor::from_slice(&parsed_test_bytes)
         .unwrap_or_else(|_| panic!("Unable to parse the test {:?} (bad format)", path));
 
-    let test_variants = parsed_test.get_test_variants();
+    let test_variants = parsed_test.get_test_variants_with_variant_filter(variant_filter);
 
     let root_test_name = get_file_stem(&path)?;
     let t_name_f: Box<dyn Fn(usize) -> String> = match test_variants.len() {
