@@ -21,6 +21,46 @@ thread_local! {
     static BACKTRACE: RefCell<Option<Backtrace>> = RefCell::new(None);
 }
 
+trait TestProgressIndicator {
+    fn set_current_test_name(&self, t_name: String);
+    fn notify_test_completed(&mut self);
+}
+
+/// Simple test progress indicator that uses `println!`s.
+struct SimpleProgressIndicator {
+    num_tests: u64,
+    curr_test: usize,
+}
+
+impl TestProgressIndicator for SimpleProgressIndicator {
+    fn set_current_test_name(&self, t_name: String) {
+        println!(
+            "({}/{}) Running {}...",
+            self.curr_test, self.num_tests, t_name
+        );
+    }
+
+    // Kinda gross...
+    fn notify_test_completed(&mut self) {
+        self.curr_test += 1;
+    }
+}
+
+/// More elegant test progress indicator that uses a progress bar library.
+struct FancyProgressIndicator {
+    prog_bar: ProgressBar,
+}
+
+impl TestProgressIndicator for FancyProgressIndicator {
+    fn set_current_test_name(&self, t_name: String) {
+        self.prog_bar.set_message(t_name);
+    }
+
+    fn notify_test_completed(&mut self) {
+        self.prog_bar.inc(1);
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) enum TestStatus {
     Passed,
@@ -115,14 +155,12 @@ pub(crate) struct TestRunResult {
     pub(crate) status: TestStatus,
 }
 
-pub(crate) fn run_plonky2_tests(parsed_tests: Vec<ParsedTestGroup>) -> Vec<TestGroupRunResults> {
+pub(crate) fn run_plonky2_tests(
+    parsed_tests: Vec<ParsedTestGroup>,
+    simple_progress_indicator: bool,
+) -> Vec<TestGroupRunResults> {
     let num_tests = num_tests_in_groups(parsed_tests.iter());
-    let mut prog_bar = ProgressBar::new(num_tests).with_style(
-        ProgressStyle::with_template(
-            "{bar:60.magenta} {pos}/{len} ETA: [{eta_precise}] | Test: {msg}",
-        )
-        .unwrap(),
-    );
+    let mut p_indicator = create_progress_indicator(num_tests, simple_progress_indicator);
 
     let orig_panic_hook = panic::take_hook();
 
@@ -137,44 +175,69 @@ pub(crate) fn run_plonky2_tests(parsed_tests: Vec<ParsedTestGroup>) -> Vec<TestG
 
     let res = parsed_tests
         .into_iter()
-        .map(|g| run_test_group(g, &mut prog_bar))
+        .map(|g| run_test_group(g, &mut p_indicator))
         .collect();
     panic::set_hook(orig_panic_hook);
 
     res
 }
 
-fn run_test_group(group: ParsedTestGroup, bar: &mut ProgressBar) -> TestGroupRunResults {
+fn create_progress_indicator(
+    num_tests: u64,
+    simple_progress_indicator: bool,
+) -> Box<dyn TestProgressIndicator> {
+    match simple_progress_indicator {
+        false => Box::new({
+            FancyProgressIndicator {
+                prog_bar: ProgressBar::new(num_tests).with_style(
+                    ProgressStyle::with_template(
+                        "{bar:60.magenta} {pos}/{len} ETA: [{eta_precise}] | Test: {msg}",
+                    )
+                    .unwrap(),
+                ),
+            }
+        }),
+        true => Box::new(SimpleProgressIndicator {
+            curr_test: 0,
+            num_tests,
+        }),
+    }
+}
+
+fn run_test_group(
+    group: ParsedTestGroup,
+    p_indicator: &mut Box<dyn TestProgressIndicator>,
+) -> TestGroupRunResults {
     TestGroupRunResults {
         name: group.name,
         sub_group_res: group
             .sub_groups
             .into_iter()
-            .map(|sub_g| run_test_sub_group(sub_g, bar))
+            .map(|sub_g| run_test_sub_group(sub_g, p_indicator))
             .collect(),
     }
 }
 
 fn run_test_sub_group(
     sub_group: ParsedTestSubGroup,
-    bar: &mut ProgressBar,
+    p_indicator: &mut Box<dyn TestProgressIndicator>,
 ) -> TestSubGroupRunResults {
     TestSubGroupRunResults {
         name: sub_group.name,
         test_res: sub_group
             .tests
             .into_iter()
-            .map(|sub_g| run_test(sub_g, bar))
+            .map(|sub_g| run_test(sub_g, p_indicator))
             .collect(),
     }
 }
 
-fn run_test(test: Test, bar: &mut ProgressBar) -> TestRunResult {
+fn run_test(test: Test, p_indicator: &mut Box<dyn TestProgressIndicator>) -> TestRunResult {
     trace!("Running test {}...", test.name);
 
-    bar.set_message(test.name.to_string());
+    p_indicator.set_current_test_name(test.name.to_string());
     let res = run_test_and_get_test_result(test.info);
-    bar.inc(1);
+    p_indicator.notify_test_completed();
 
     TestRunResult {
         name: test.name,

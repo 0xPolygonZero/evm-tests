@@ -36,4 +36,11 @@ pub(crate) struct ProgArgs {
     /// An optional filter to only run tests that are a subset of the given
     /// test path.
     pub(crate) test_filter: Option<String>,
+
+    /// Use a simple progress indicator that relies on `println!`s instead of an
+    /// actual progress bar to display the current test status. In some
+    /// situations, the more elegant progress bar may interfere with
+    /// stdout/stderr.
+    #[arg(short, long, default_value_t = false)]
+    pub(crate) simple_progress_indicator: bool,
 }
