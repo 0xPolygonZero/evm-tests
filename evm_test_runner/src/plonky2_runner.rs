@@ -1,9 +1,8 @@
 //! Handles feeding the parsed tests into `plonky2` and determining the result.
 //! Essentially converts parsed tests into test results.
 
-use std::{cell::RefCell, fmt::Display, panic, time::Duration};
+use std::{fmt::Display, time::Duration};
 
-use backtrace::Backtrace;
 use common::types::TestVariantRunInfo;
 use ethereum_types::H256;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -15,11 +14,6 @@ use plonky2::{
 use plonky2_evm::{all_stark::AllStark, config::StarkConfig, prover::prove};
 
 use crate::test_dir_reading::{ParsedTestGroup, ParsedTestSubGroup, Test};
-
-// Inspired by: https://stackoverflow.com/a/73711057
-thread_local! {
-    static BACKTRACE: RefCell<Option<Backtrace>> = RefCell::new(None);
-}
 
 trait TestProgressIndicator {
     fn set_current_test_name(&self, t_name: String);
@@ -65,7 +59,6 @@ impl TestProgressIndicator for FancyProgressIndicator {
 pub(crate) enum TestStatus {
     Passed,
     EvmErr(String),
-    EvmPanic(String),
     IncorrectAccountFinalState(TrieFinalStateDiff),
 }
 
@@ -74,7 +67,6 @@ impl Display for TestStatus {
         match self {
             TestStatus::Passed => write!(f, "Passed"),
             TestStatus::EvmErr(err) => write!(f, "Evm error: {}", err),
-            TestStatus::EvmPanic(panic) => write!(f, "Evm panic: {}", panic),
             TestStatus::IncorrectAccountFinalState(diff) => {
                 write!(f, "Expected trie hash mismatch: {}", diff)
             }
@@ -162,24 +154,10 @@ pub(crate) fn run_plonky2_tests(
     let num_tests = num_tests_in_groups(parsed_tests.iter());
     let mut p_indicator = create_progress_indicator(num_tests, simple_progress_indicator);
 
-    let orig_panic_hook = panic::take_hook();
-
-    // When we catch panics from `plonky2`, they still print to `stderr` even though
-    // they are captured. To avoid polluting `stderr`, we temporarily replace the
-    // hook so that it captures the backtrace so we are able to include this in the
-    // test output.
-    panic::set_hook(Box::new(|_| {
-        let trace = Backtrace::new();
-        BACKTRACE.with(move |b| b.borrow_mut().replace(trace));
-    }));
-
-    let res = parsed_tests
+    parsed_tests
         .into_iter()
         .map(|g| run_test_group(g, &mut p_indicator))
-        .collect();
-    panic::set_hook(orig_panic_hook);
-
-    res
+        .collect()
 }
 
 fn create_progress_indicator(
@@ -247,39 +225,23 @@ fn run_test(test: Test, p_indicator: &mut Box<dyn TestProgressIndicator>) -> Tes
 
 /// Run a test against `plonky2` and output a result based on what happens.
 fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
-    let proof_run_res = panic::catch_unwind(|| {
-        let timing = TimingTree::new("prove", log::Level::Debug);
+    let timing = TimingTree::new("prove", log::Level::Debug);
 
-        let res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
-            &AllStark::default(),
-            &StarkConfig::standard_fast_config(),
-            test.gen_inputs,
-            &mut TimingTree::default(),
-        );
+    let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
+        &AllStark::default(),
+        &StarkConfig::standard_fast_config(),
+        test.gen_inputs,
+        &mut TimingTree::default(),
+    );
 
-        timing.filter(Duration::from_millis(100)).print();
-        res
-    });
+    timing.filter(Duration::from_millis(100)).print();
 
     let proof_run_output = match proof_run_res {
-        Ok(Ok(res)) => res,
-        Ok(Err(err)) => return TestStatus::EvmErr(err.to_string()),
-        Err(err) => {
-            let panic_str = match err.downcast::<String>() {
-                Ok(panic_str) => *panic_str,
-                Err(_) => "Unknown panic reason.".to_string(),
-            };
-
-            let panic_backtrace = BACKTRACE.with(|b| b.borrow_mut().take()).unwrap();
-            let panic_with_backtrace_str =
-                format!("panic: {}\nBacktrace: {:?}", panic_str, panic_backtrace);
-
-            return TestStatus::EvmPanic(panic_with_backtrace_str);
-        }
+        Ok(v) => v,
+        Err(evm_err) => return TestStatus::EvmErr(evm_err.to_string()),
     };
 
     let actual_state_trie_hash = proof_run_output.public_values.trie_roots_after.state_root;
-
     if actual_state_trie_hash != test.common.expected_final_account_state_root_hash {
         let trie_diff = TrieFinalStateDiff {
             state: TrieComparisonResult::Difference(
