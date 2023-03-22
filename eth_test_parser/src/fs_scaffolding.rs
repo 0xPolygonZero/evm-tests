@@ -1,7 +1,9 @@
 //! Filesystem helpers. A set of convenience functions for interacting with test
 //! input and output directories.
 use std::{
-    fs::{self, DirEntry},
+    collections::HashMap,
+    fs::{self, DirEntry, File},
+    io::BufReader,
     path::{Path, PathBuf},
 };
 
@@ -9,6 +11,7 @@ use anyhow::{anyhow, Result};
 use common::config::GENERATION_INPUTS_DEFAULT_OUTPUT_DIR;
 
 use crate::config::{ETH_TESTS_REPO_LOCAL_PATH, TEST_GROUPS};
+use crate::deserialize::TestBody;
 
 /// Get the default parsed test output directory.
 /// We first check if the flat file, `ETH_TEST_PARSER_DEV`, exists
@@ -104,4 +107,30 @@ pub(crate) fn prepare_output_dir(out_path: &Path) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Generate an iterator containing the deserialized test bodies (`TestBody`)
+/// and their `DirEntry`s.
+pub(crate) fn get_deserialized_test_bodies(
+) -> Result<impl Iterator<Item = Result<(DirEntry, TestBody), (String, String)>>> {
+    Ok(get_test_files()?.map(|entry| {
+        let test_body = get_deserialized_test_body(&entry)
+            .map_err(|err| (err.to_string(), entry.path().to_string_lossy().to_string()))?;
+        Ok((entry, test_body))
+    }))
+}
+
+fn get_deserialized_test_body(entry: &DirEntry) -> Result<TestBody> {
+    let buf = BufReader::new(File::open(entry.path())?);
+    let file_json: HashMap<String, TestBody> = serde_json::from_reader(buf)?;
+
+    // Each test JSON always contains a single outer key containing the test name.
+    // The test name is irrelevant for deserialization purposes, so we always drop
+    // it.
+    let test_body = file_json
+        .into_values()
+        .next()
+        .ok_or_else(|| anyhow!("Empty test found: {:?}", entry))?;
+
+    anyhow::Ok(test_body)
 }

@@ -13,6 +13,7 @@ use crate::report_generation::write_overall_status_report_summary_to_file;
 mod arg_parsing;
 mod plonky2_runner;
 mod report_generation;
+mod state_diff;
 mod test_dir_reading;
 
 #[tokio::main()]

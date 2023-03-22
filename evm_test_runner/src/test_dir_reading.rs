@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, Context};
 use common::{
     config::GENERATION_INPUTS_DEFAULT_OUTPUT_DIR,
-    types::{ParsedTest, TestVariantRunInfo, VariantFilterType},
+    types::{ParsedTestManifest, TestVariantRunInfo, VariantFilterType},
 };
 use log::{info, trace};
 use tokio::{
@@ -150,10 +150,10 @@ async fn parse_test(
     trace!("Reading in {:?}...", path);
 
     let parsed_test_bytes = fs::read(&path).await?;
-    let parsed_test: ParsedTest = serde_cbor::from_slice(&parsed_test_bytes)
+    let parsed_test: ParsedTestManifest = serde_cbor::from_slice(&parsed_test_bytes)
         .unwrap_or_else(|_| panic!("Unable to parse the test {:?} (bad format)", path));
 
-    let test_variants = parsed_test.get_test_variants_with_variant_filter(variant_filter);
+    let test_variants = parsed_test.into_filtered_variants(variant_filter);
 
     let root_test_name = get_file_stem(&path)?;
     let t_name_f: Box<dyn Fn(usize) -> String> = match test_variants.len() {

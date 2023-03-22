@@ -12,5 +12,7 @@ anyhow = { version = "1.0.66", features = ["backtrace"] }
 ethereum-types = "0.14.0"
 eth_trie_utils = "0.4.1"
 flexi_logger = { version = "0.25.1", features = ["async"] }
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "5aafbaad491b89805b649650131ab80ee8c79605" }
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "f4e65feb65b74620f8c664ae82f8e68ee6f0370e" }
 serde = {version = "1.0.147", features = ["derive"] }
+revm = { version = "3.0.0", features = ["serde"] }
+ruint = { version = "1.7.0", features = ["primitive-types"] }

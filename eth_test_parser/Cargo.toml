@@ -10,7 +10,7 @@ edition = "2021"
 [dependencies]
 common = { path = "../common" }
 eth_trie_utils = "0.4.1"
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "5aafbaad491b89805b649650131ab80ee8c79605" }
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "f4e65feb65b74620f8c664ae82f8e68ee6f0370e" }
 
 anyhow = { version = "1.0.66", features = ["backtrace"] }
 clap = {version = "4.1.8", features = ["derive"] }
@@ -28,3 +28,5 @@ serde_with = "2.0.1"
 serde_cbor = "0.11.2"
 tokio = { version = "1.21.2", features = ["full"] }
 futures = "0.3.25"
+revm = { version = "3.0.0", features = ["serde"] }
+ruint = { version = "1.7.0", features = ["primitive-types"] }

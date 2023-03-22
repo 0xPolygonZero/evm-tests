@@ -11,9 +11,12 @@ use plonky2::{
     field::goldilocks_field::GoldilocksField, plonk::config::KeccakGoldilocksConfig,
     util::timing::TimingTree,
 };
-use plonky2_evm::{all_stark::AllStark, config::StarkConfig, prover::prove};
+use plonky2_evm::{all_stark::AllStark, config::StarkConfig, prover::prove_with_outputs};
 
-use crate::test_dir_reading::{ParsedTestGroup, ParsedTestSubGroup, Test};
+use crate::{
+    state_diff::StateDiff,
+    test_dir_reading::{ParsedTestGroup, ParsedTestSubGroup, Test},
+};
 
 trait TestProgressIndicator {
     fn set_current_test_name(&self, t_name: String);
@@ -227,7 +230,7 @@ fn run_test(test: Test, p_indicator: &mut Box<dyn TestProgressIndicator>) -> Tes
 fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     let timing = TimingTree::new("prove", log::Level::Debug);
 
-    let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
+    let proof_run_res = prove_with_outputs::<GoldilocksField, KeccakGoldilocksConfig, 2>(
         &AllStark::default(),
         &StarkConfig::standard_fast_config(),
         test.gen_inputs,
@@ -236,13 +239,23 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
 
     timing.filter(Duration::from_millis(100)).print();
 
-    let proof_run_output = match proof_run_res {
+    let (proof_run_output, generation_outputs) = match proof_run_res {
         Ok(v) => v,
         Err(evm_err) => return TestStatus::EvmErr(evm_err.to_string()),
     };
 
     let actual_state_trie_hash = proof_run_output.public_values.trie_roots_after.state_root;
     if actual_state_trie_hash != test.common.expected_final_account_state_root_hash {
+        if let Some(serialized_revm_variant) = test.revm_variant {
+            let instance = serialized_revm_variant.into_hydrated();
+            let expected_state = instance.transact_ref().map(|result| result.state);
+            if let Ok(state) = expected_state {
+                let state_diff = StateDiff::new(state, generation_outputs.accounts);
+                // TODO: Make this optional / configurable
+                println!("{}", state_diff);
+            }
+        }
+
         let trie_diff = TrieFinalStateDiff {
             state: TrieComparisonResult::Difference(
                 actual_state_trie_hash,
