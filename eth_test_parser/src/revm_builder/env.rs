@@ -66,15 +66,6 @@ impl TestBody {
             gas_limit: self.env.current_gas_limit.into(),
         };
 
-        let access_list: Vec<(revm::primitives::B160, Vec<ruint::aliases::U256>)> = self
-            .pre
-            .iter()
-            .map(|(address, account)| {
-                let address = address.to_fixed_bytes().into();
-                let slots = account.storage.keys().map(|key| (*key).into()).collect();
-                (address, slots)
-            })
-            .collect();
 
         let gas_price = self
             .transaction
@@ -106,7 +97,7 @@ impl TestBody {
                     data: tx_shared_data.data[m.indexes.data].clone(),
                     chain_id: Some(MATIC_CHAIN_ID),
                     nonce: self.transaction.nonce.try_into().ok(),
-                    access_list: access_list.clone(),
+                    access_list: vec![],
                 },
             })
             .collect())
