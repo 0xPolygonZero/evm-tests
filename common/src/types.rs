@@ -5,53 +5,86 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
-use ethereum_types::H256;
+use ethereum_types::{Address, H256};
 use plonky2_evm::{
     generation::{GenerationInputs, TrieInputs},
     proof::BlockMetadata,
 };
 use serde::{Deserialize, Serialize};
 
-/// A parsed Ethereum test that is ready to be fed into `Plonky2`.
-///
-/// Note that for our runner we break any txn "variants" (see `indexes` under https://ethereum-tests.readthedocs.io/en/latest/test_types/gstate_tests.html#post-section) into separate sub-tests when running. This is because we don't want a single sub-test variant to cause the entire test to fail (we just want the variant to fail).
-#[derive(Debug, Deserialize, Serialize)]
-pub struct ParsedTest {
-    pub test_variants: Vec<TestVariant>,
+use crate::revm::SerializableEVMInstance;
 
-    /// State that is constant between tests.
-    pub const_plonky2_inputs: ConstGenerationInputs,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ParsedTestManifest {
+    pub plonky2_variants: Plonky2ParsedTest,
+    pub revm_variants: Option<Vec<SerializableEVMInstance>>,
 }
 
-impl ParsedTest {
-    /// Construct the actual test variants for the test.
-    pub fn get_test_variants_with_variant_filter(
+impl ParsedTestManifest {
+    pub fn into_filtered_variants(
         self,
         v_filter: Option<VariantFilterType>,
     ) -> Vec<TestVariantRunInfo> {
-        self.test_variants
+        // If `self.revm_variants` is None, the parser was unable to generate an `revm`
+        // instance for any test variant. This occurs when some shared test data was
+        // unable to be parsed (e.g. the `transaction` section). In this case, we
+        // generate a `None` for each test variant slot so that it can be zipped with
+        // plonky2 variants.
+        let revm_variants: Vec<Option<SerializableEVMInstance>> = match self.revm_variants {
+            // `revm_variants` will be parallel to `plonky2_variants`, given they are both
+            // generated from the same vec (`test.post.merge`).
+            None => (0..self.plonky2_variants.test_variants.len())
+                .map(|_| None)
+                .collect(),
+            Some(v) => v.into_iter().map(Some).collect(),
+        };
+
+        self.plonky2_variants
+            .test_variants
             .into_iter()
+            .zip(revm_variants.into_iter())
             .enumerate()
             .filter(|(variant_idx, _)| match &v_filter {
                 Some(VariantFilterType::Single(v)) => variant_idx == v,
                 Some(VariantFilterType::Range(r)) => r.contains(variant_idx),
                 None => true,
             })
-            .map(|(_, t_var)| {
+            .map(|(_, (t_var, revm_variant))| {
                 let gen_inputs = GenerationInputs {
                     signed_txns: vec![t_var.txn_bytes],
-                    tries: self.const_plonky2_inputs.tries.clone(),
-                    contract_code: self.const_plonky2_inputs.contract_code.clone(),
-                    block_metadata: self.const_plonky2_inputs.block_metadata.clone(),
+                    tries: self.plonky2_variants.const_plonky2_inputs.tries.clone(),
+                    contract_code: self
+                        .plonky2_variants
+                        .const_plonky2_inputs
+                        .contract_code
+                        .clone(),
+                    block_metadata: self
+                        .plonky2_variants
+                        .const_plonky2_inputs
+                        .block_metadata
+                        .clone(),
+                    addresses: self.plonky2_variants.const_plonky2_inputs.addresses.clone(),
                 };
 
                 TestVariantRunInfo {
                     gen_inputs,
                     common: t_var.common,
+                    revm_variant,
                 }
             })
             .collect()
     }
+}
+
+/// A parsed Ethereum test that is ready to be fed into `Plonky2`.
+///
+/// Note that for our runner we break any txn "variants" (see `indexes` under https://ethereum-tests.readthedocs.io/en/latest/test_types/gstate_tests.html#post-section) into separate sub-tests when running. This is because we don't want a single sub-test variant to cause the entire test to fail (we just want the variant to fail).
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Plonky2ParsedTest {
+    pub test_variants: Vec<TestVariant>,
+
+    /// State that is constant between tests.
+    pub const_plonky2_inputs: ConstGenerationInputs,
 }
 
 /// A single test that
@@ -66,6 +99,7 @@ pub struct TestVariant {
 pub struct TestVariantRunInfo {
     pub gen_inputs: GenerationInputs,
     pub common: TestVariantCommon,
+    pub revm_variant: Option<SerializableEVMInstance>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -79,6 +113,7 @@ pub struct ConstGenerationInputs {
     pub tries: TrieInputs,
     pub contract_code: HashMap<H256, Vec<u8>>,
     pub block_metadata: BlockMetadata,
+    pub addresses: Vec<Address>,
 }
 
 #[derive(Clone, Debug)]

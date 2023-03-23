@@ -5,76 +5,46 @@
 //! ```ignore
 //! crate::deserialize::TestBody -> plonky2_evm::generation::GenerationInputs
 //! ```
-use std::{
-    collections::HashMap,
-    fs::{DirEntry, File},
-    io::BufReader,
-};
+use std::collections::HashMap;
 
-use anyhow::{anyhow, Result};
-use common::types::{ConstGenerationInputs, ParsedTest, TestVariant, TestVariantCommon};
+use anyhow::Result;
+use common::{
+    config,
+    types::{ConstGenerationInputs, Plonky2ParsedTest, TestVariant, TestVariantCommon},
+};
 use eth_trie_utils::partial_trie::{Nibbles, PartialTrie};
-use ethereum_types::{H160, H256, U256};
+use ethereum_types::{Address, H160, H256, U256};
 use keccak_hash::keccak;
 use plonky2_evm::{generation::TrieInputs, proof::BlockMetadata};
 use rlp::Encodable;
 use rlp_derive::{RlpDecodable, RlpEncodable};
 
-use crate::{
-    deserialize::{Env, TestBody},
-    fs_scaffolding::get_test_files,
-};
+use crate::deserialize::{Env, TestBody};
 
 #[derive(RlpDecodable, RlpEncodable)]
 pub(crate) struct AccountRlp {
-    nonce: U256,
+    nonce: u64,
     balance: U256,
     storage_hash: H256,
     code_hash: H256,
 }
 
-/// Generate an iterator containing the deserialized test bodies (`TestBody`)
-/// and their `DirEntry`s.
-pub(crate) fn get_deserialized_test_bodies(
-) -> Result<impl Iterator<Item = Result<(DirEntry, TestBody), (String, String)>>> {
-    Ok(get_test_files()?.map(|entry| {
-        let test_body = get_deserialized_test_body(&entry)
-            .map_err(|err| (err.to_string(), entry.path().to_string_lossy().to_string()))?;
-        Ok((entry, test_body))
-    }))
-}
-
-fn get_deserialized_test_body(entry: &DirEntry) -> Result<TestBody> {
-    let buf = BufReader::new(File::open(entry.path())?);
-    let file_json: HashMap<String, TestBody> = serde_json::from_reader(buf)?;
-
-    // Each test JSON always contains a single outer key containing the test name.
-    // The test name is irrelevant for deserialization purposes, so we always drop
-    // it.
-    let test_body = file_json
-        .into_values()
-        .next()
-        .ok_or_else(|| anyhow!("Empty test found: {:?}", entry))?;
-
-    anyhow::Ok(test_body)
-}
-
 impl Env {
-    fn block_metadata(self) -> BlockMetadata {
+    fn block_metadata(&self) -> BlockMetadata {
         BlockMetadata {
             block_beneficiary: self.current_coinbase,
             block_timestamp: self.current_timestamp,
             block_number: self.current_number,
             block_difficulty: self.current_difficulty,
             block_gaslimit: self.current_gas_limit,
-            block_chain_id: 137.into(), // Matic's Chain id.
+            block_chain_id: config::MATIC_CHAIN_ID.into(),
             block_base_fee: self.current_base_fee,
         }
     }
 }
 
 impl TestBody {
-    pub fn into_parsed_test(self) -> ParsedTest {
+    pub fn as_plonky2_test_input(&self) -> Plonky2ParsedTest {
         let storage_tries = self.get_storage_tries();
         let state_trie = self.get_state_trie(&storage_tries);
 
@@ -88,29 +58,32 @@ impl TestBody {
 
         let contract_code: HashMap<_, _> = self
             .pre
-            .into_values()
+            .values()
             .map(|pre| (hash(&pre.code.0), pre.code.0.clone()))
             .collect();
 
         let test_variants = self
             .post
             .merge
-            .into_iter()
+            .iter()
             .map(|x| TestVariant {
-                txn_bytes: x.txbytes.0,
+                txn_bytes: x.txbytes.0.clone(),
                 common: TestVariantCommon {
                     expected_final_account_state_root_hash: x.hash,
                 },
             })
             .collect();
 
+        let addresses = self.pre.keys().copied().collect::<Vec<Address>>();
+
         let const_plonky2_inputs = ConstGenerationInputs {
             tries,
             contract_code,
             block_metadata: self.env.block_metadata(),
+            addresses,
         };
 
-        ParsedTest {
+        Plonky2ParsedTest {
             test_variants,
             const_plonky2_inputs,
         }
@@ -173,9 +146,9 @@ impl TestBody {
     }
 }
 
-impl From<TestBody> for ParsedTest {
+impl From<TestBody> for Plonky2ParsedTest {
     fn from(test_body: TestBody) -> Self {
-        test_body.into_parsed_test()
+        test_body.as_plonky2_test_input()
     }
 }
 

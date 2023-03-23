@@ -77,6 +77,24 @@ pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<u8>
     deserializer.deserialize_string(PrefixHexStrVisitor())
 }
 
+fn u64_from_hex<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    u64::from_str_radix(&s[2..], 16).map_err(D::Error::custom)
+}
+
+fn vec_u64_from_hex<'de, D>(deserializer: D) -> Result<Vec<u64>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: Vec<String> = Deserialize::deserialize(deserializer)?;
+    s.into_iter()
+        .map(|x| u64::from_str_radix(&x[2..], 16).map_err(D::Error::custom))
+        .collect::<Result<Vec<_>, D::Error>>()
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Env {
@@ -92,9 +110,9 @@ pub(crate) struct Env {
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct PostStateIndexes {
-    pub(crate) data: u64,
-    pub(crate) gas: u64,
-    pub(crate) value: u64,
+    pub(crate) data: usize,
+    pub(crate) gas: usize,
+    pub(crate) value: usize,
 }
 
 #[derive(Deserialize, Debug)]
@@ -115,7 +133,8 @@ pub(crate) struct Post {
 pub(crate) struct PreAccount {
     pub(crate) balance: U256,
     pub(crate) code: ByteString,
-    pub(crate) nonce: U256,
+    #[serde(deserialize_with = "u64_from_hex")]
+    pub(crate) nonce: u64,
     pub(crate) storage: HashMap<U256, U256>,
 }
 
@@ -124,7 +143,8 @@ pub(crate) struct PreAccount {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Transaction {
     pub(crate) data: Vec<ByteString>,
-    pub(crate) gas_limit: Vec<U256>,
+    #[serde(deserialize_with = "vec_u64_from_hex")]
+    pub(crate) gas_limit: Vec<u64>,
     pub(crate) gas_price: Option<U256>,
     pub(crate) nonce: U256,
     pub(crate) secret_key: H256,
