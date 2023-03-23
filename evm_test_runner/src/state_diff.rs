@@ -107,9 +107,9 @@ impl Display for Line {
 impl Display for StateDiff {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut fst = self.revm_state.iter().collect::<Vec<_>>();
-        fst.sort_by(|a, b| b.0.cmp(a.0));
+        fst.sort_by_key(|(address, _)| (self.plonky2_state.contains_key(address), *address));
         let mut snd = self.plonky2_state.iter().collect::<Vec<_>>();
-        snd.sort_by(|a, b| b.0.cmp(a.0));
+        snd.sort_by_key(|(address, _)| (self.revm_state.contains_key(address), *address));
 
         let text1 = format!("{:#?}", fst);
         let text2 = format!("{:#?}", snd);
