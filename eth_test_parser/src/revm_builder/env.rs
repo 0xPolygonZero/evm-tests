@@ -66,7 +66,6 @@ impl TestBody {
             gas_limit: self.env.current_gas_limit.into(),
         };
 
-
         let gas_price = self
             .transaction
             .gas_price
