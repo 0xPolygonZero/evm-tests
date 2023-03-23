@@ -96,7 +96,7 @@ impl TestBody {
                     data: tx_shared_data.data[m.indexes.data].clone(),
                     chain_id: Some(MATIC_CHAIN_ID),
                     nonce: self.transaction.nonce.try_into().ok(),
-                    access_list: vec![],
+                    access_list: vec![], // TODO: Add `access_list` to `Transaction` and use it here.
                 },
             })
             .collect())
