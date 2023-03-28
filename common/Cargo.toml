@@ -10,9 +10,9 @@ edition = "2021"
 [dependencies]
 anyhow = { version = "1.0.66", features = ["backtrace"] }
 ethereum-types = "0.14.0"
-eth_trie_utils = "0.4.1"
+eth_trie_utils = "0.5.0"
 flexi_logger = { version = "0.25.1", features = ["async"] }
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "f4e65feb65b74620f8c664ae82f8e68ee6f0370e" }
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "b667c07497d5343e5d239a5980debf6401ac775f" }
 serde = {version = "1.0.147", features = ["derive"] }
 revm = { version = "3.0.0", features = ["serde"] }
 ruint = { version = "1.7.0", features = ["primitive-types"] }

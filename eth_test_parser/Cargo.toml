@@ -9,8 +9,8 @@ edition = "2021"
 
 [dependencies]
 common = { path = "../common" }
-eth_trie_utils = "0.4.1"
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "f4e65feb65b74620f8c664ae82f8e68ee6f0370e" }
+eth_trie_utils = "0.5.0"
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "b667c07497d5343e5d239a5980debf6401ac775f" }
 
 anyhow = { version = "1.0.66", features = ["backtrace"] }
 clap = {version = "4.1.8", features = ["derive"] }
