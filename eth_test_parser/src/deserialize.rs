@@ -142,6 +142,7 @@ pub(crate) struct PreAccount {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AccessList {
     pub(crate) address: Address,
+    #[serde(default)]
     pub(crate) storage_keys: Vec<U256>,
 }
 
