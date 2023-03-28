@@ -7,6 +7,7 @@ use crate::deserialize::TestBody;
 
 struct TxSharedData {
     data: Vec<Bytes>,
+    access_list: Vec<Vec<(revm::primitives::B160, Vec<revm::primitives::U256>)>>,
     gas_limit: Vec<u64>,
     value: Vec<ruint::aliases::U256>,
 }
@@ -18,6 +19,24 @@ impl TestBody {
             .data
             .iter()
             .map(|byte_string| byte_string.0.clone().into())
+            .collect();
+
+        let access_list = self
+            .transaction
+            .access_lists
+            .iter()
+            .map(|access_list| {
+                access_list
+                    .0
+                    .iter()
+                    .map(|x| {
+                        (
+                            x.address.to_fixed_bytes().into(),
+                            x.storage_keys.iter().map(|x| (*x).into()).collect(),
+                        )
+                    })
+                    .collect()
+            })
             .collect();
 
         let gas_limit = self.transaction.gas_limit.to_vec();
@@ -39,6 +58,7 @@ impl TestBody {
 
         Ok(TxSharedData {
             data,
+            access_list,
             gas_limit,
             value,
         })
@@ -96,8 +116,14 @@ impl TestBody {
                     data: tx_shared_data.data[m.indexes.data].clone(),
                     chain_id: Some(MATIC_CHAIN_ID),
                     nonce: self.transaction.nonce.try_into().ok(),
-                    // TODO: Add `access_list` to `Transaction` and use it here.
-                    access_list: vec![],
+                    // `access_list` is defined parallel to `transaction.data` in the test filler
+                    // definitions.
+                    // https://ethereum-tests.readthedocs.io/en/latest/test_filler/test_transaction_state.html?highlight=access#fields
+                    access_list: tx_shared_data
+                        .access_list
+                        .get(m.indexes.data)
+                        .cloned()
+                        .unwrap_or_default(),
                 },
             })
             .collect())

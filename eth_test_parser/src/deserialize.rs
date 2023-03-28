@@ -2,13 +2,13 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use ethereum_types::{H160, H256, U256, U512};
+use ethereum_types::{Address, H160, H256, U256, U512};
 use hex::FromHex;
 use serde::{
     de::{Error, Visitor},
     Deserialize, Deserializer,
 };
-use serde_with::{serde_as, NoneAsEmptyString};
+use serde_with::{serde_as, DefaultOnNull, NoneAsEmptyString};
 
 /// In a couple tests, an entry in the `transaction.value` key will contain
 /// the prefix, `0x:bigint`, in addition to containing a value greater than 256
@@ -138,10 +138,27 @@ pub(crate) struct PreAccount {
     pub(crate) storage: HashMap<U256, U256>,
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct AccessList {
+    pub(crate) address: Address,
+    pub(crate) storage_keys: Vec<U256>,
+}
+
+#[serde_as]
+#[derive(Deserialize, Debug)]
+/// This is a wrapper around a `Vec<AccessList>` that is used to deserialize a
+/// `null` into an empty vec.
+pub(crate) struct AccessListsInner(
+    #[serde_as(deserialize_as = "DefaultOnNull")] pub(crate) Vec<AccessList>,
+);
+
 #[serde_as]
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Transaction {
+    #[serde(default)]
+    pub(crate) access_lists: Vec<AccessListsInner>,
     pub(crate) data: Vec<ByteString>,
     #[serde(deserialize_with = "vec_u64_from_hex")]
     pub(crate) gas_limit: Vec<u64>,
