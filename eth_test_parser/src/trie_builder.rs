@@ -12,7 +12,10 @@ use common::{
     config,
     types::{ConstGenerationInputs, Plonky2ParsedTest, TestVariant, TestVariantCommon},
 };
-use eth_trie_utils::partial_trie::{Nibbles, PartialTrie};
+use eth_trie_utils::{
+    nibbles::Nibbles,
+    partial_trie::{HashedPartialTrie, PartialTrie},
+};
 use ethereum_types::{Address, H160, H256, U256};
 use keccak_hash::keccak;
 use plonky2_evm::{generation::TrieInputs, proof::BlockMetadata};
@@ -50,9 +53,13 @@ impl TestBody {
 
         let tries = TrieInputs {
             state_trie,
-            transactions_trie: PartialTrie::Empty, /* TODO: Change to self.get_txn_trie() once
-                                                    * zkEVM supports it */
-            receipts_trie: PartialTrie::Empty, // TODO: Fill in once we know what we are doing...
+            transactions_trie: HashedPartialTrie::default(), /* TODO: Change to
+                                                              * self.get_txn_trie()
+                                                              * once
+                                                              * zkEVM supports it */
+            receipts_trie: HashedPartialTrie::default(), /* TODO: Fill in once we know what we
+                                                          * are
+                                                          * doing... */
             storage_tries,
         };
 
@@ -89,7 +96,7 @@ impl TestBody {
         }
     }
 
-    fn get_storage_tries(&self) -> Vec<(H160, PartialTrie)> {
+    fn get_storage_tries(&self) -> Vec<(H160, HashedPartialTrie)> {
         self.pre
             .iter()
             .map(|(acc_key, pre_acc)| {
@@ -109,7 +116,7 @@ impl TestBody {
             .collect()
     }
 
-    fn get_state_trie(&self, storage_tries: &[(H160, PartialTrie)]) -> PartialTrie {
+    fn get_state_trie(&self, storage_tries: &[(H160, HashedPartialTrie)]) -> HashedPartialTrie {
         self.pre
             .iter()
             .map(|(acc_key, pre_acc)| {
@@ -131,7 +138,7 @@ impl TestBody {
     }
 
     #[allow(unused)] // TODO: Will be used later.
-    fn get_txn_trie(&self) -> PartialTrie {
+    fn get_txn_trie(&self) -> HashedPartialTrie {
         self.post
             .merge
             .iter()
@@ -152,13 +159,13 @@ impl From<TestBody> for Plonky2ParsedTest {
     }
 }
 
-fn get_storage_hash(account_address: &H160, storage_tries: &[(H160, PartialTrie)]) -> H256 {
+fn get_storage_hash(account_address: &H160, storage_tries: &[(H160, HashedPartialTrie)]) -> H256 {
     storage_tries
         .iter()
         .find(|(addr, _)| account_address == addr)
         .unwrap()
         .1
-        .calc_hash()
+        .hash()
 }
 
 fn u256_to_be_bytes(x: U256) -> [u8; 32] {
