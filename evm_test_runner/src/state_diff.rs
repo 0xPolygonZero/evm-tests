@@ -43,7 +43,12 @@ impl StateDiff {
                 let mut storage = v
                     .storage
                     .into_iter()
-                    .map(|(k, v)| (k.into(), v.present_value.into()))
+                    .map(|(k, v)| {
+                        (
+                            keccak(k.to_be_bytes::<32>()).0.into(),
+                            v.present_value.into(),
+                        )
+                    })
                     .collect::<Vec<(U256, U256)>>();
                 storage.sort_by(|a, b| b.0.cmp(&a.0));
 
