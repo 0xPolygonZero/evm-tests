@@ -11,6 +11,7 @@ use test_dir_reading::{get_default_parsed_tests_path, read_in_all_parsed_tests};
 use crate::report_generation::write_overall_status_report_summary_to_file;
 
 mod arg_parsing;
+mod persistent_run_state;
 mod plonky2_runner;
 mod report_generation;
 mod state_diff;
