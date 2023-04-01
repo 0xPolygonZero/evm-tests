@@ -14,6 +14,7 @@ use plonky2::{
 use plonky2_evm::{all_stark::AllStark, config::StarkConfig, prover::prove_with_outputs};
 
 use crate::{
+    persistent_run_state::TestRunEntries,
     state_diff::StateDiff,
     test_dir_reading::{ParsedTestGroup, ParsedTestSubGroup, Test},
 };
@@ -153,13 +154,14 @@ pub(crate) struct TestRunResult {
 pub(crate) fn run_plonky2_tests(
     parsed_tests: Vec<ParsedTestGroup>,
     simple_progress_indicator: bool,
+    persistent_test_state: &mut TestRunEntries,
 ) -> Vec<TestGroupRunResults> {
     let num_tests = num_tests_in_groups(parsed_tests.iter());
     let mut p_indicator = create_progress_indicator(num_tests, simple_progress_indicator);
 
     parsed_tests
         .into_iter()
-        .map(|g| run_test_group(g, &mut p_indicator))
+        .map(|g| run_test_group(g, &mut p_indicator, persistent_test_state))
         .collect()
 }
 
@@ -188,13 +190,14 @@ fn create_progress_indicator(
 fn run_test_group(
     group: ParsedTestGroup,
     p_indicator: &mut Box<dyn TestProgressIndicator>,
+    persistent_test_state: &mut TestRunEntries,
 ) -> TestGroupRunResults {
     TestGroupRunResults {
         name: group.name,
         sub_group_res: group
             .sub_groups
             .into_iter()
-            .map(|sub_g| run_test_sub_group(sub_g, p_indicator))
+            .map(|sub_g| run_test_sub_group(sub_g, p_indicator, persistent_test_state))
             .collect(),
     }
 }
@@ -202,22 +205,28 @@ fn run_test_group(
 fn run_test_sub_group(
     sub_group: ParsedTestSubGroup,
     p_indicator: &mut Box<dyn TestProgressIndicator>,
+    persistent_test_state: &mut TestRunEntries,
 ) -> TestSubGroupRunResults {
     TestSubGroupRunResults {
         name: sub_group.name,
         test_res: sub_group
             .tests
             .into_iter()
-            .map(|sub_g| run_test(sub_g, p_indicator))
+            .map(|sub_g| run_test(sub_g, p_indicator, persistent_test_state))
             .collect(),
     }
 }
 
-fn run_test(test: Test, p_indicator: &mut Box<dyn TestProgressIndicator>) -> TestRunResult {
+fn run_test(
+    test: Test,
+    p_indicator: &mut Box<dyn TestProgressIndicator>,
+    persistent_test_state: &mut TestRunEntries,
+) -> TestRunResult {
     trace!("Running test {}...", test.name);
 
     p_indicator.set_current_test_name(test.name.to_string());
     let res = run_test_and_get_test_result(test.info);
+    persistent_test_state.update_test_state(&test.name, res.clone().into());
     p_indicator.notify_test_completed();
 
     TestRunResult {

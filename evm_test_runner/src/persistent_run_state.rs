@@ -3,13 +3,15 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::plonky2_runner::TestStatus;
+
 const PASS_STATE_PATH_STR: &str = "test_pass_state.state";
 
 #[derive(Debug, Default)]
 pub(crate) struct TestRunEntries(HashMap<String, RunEntry>);
 
 impl TestRunEntries {
-    fn to_serializable(self) -> Vec<SerializableRunEntry> {
+    pub(crate) fn to_serializable(self) -> Vec<SerializableRunEntry> {
         self.0
             .into_iter()
             .map(|(test_name, data)| SerializableRunEntry {
@@ -22,7 +24,7 @@ impl TestRunEntries {
             .collect()
     }
 
-    fn update_test_state(&mut self, t_key: &str, state: PassState) {
+    pub(crate) fn update_test_state(&mut self, t_key: &str, state: PassState) {
         let entry = self.0.get_mut(t_key).unwrap_or_else(|| {
             panic!(
                 "Tried to update the pass state of the test \"{}\" but it did not exist!",
@@ -42,15 +44,25 @@ impl From<Vec<SerializableRunEntry>> for TestRunEntries {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-enum PassState {
+#[derive(Debug, Deserialize, Default, Serialize)]
+pub(crate) enum PassState {
     Passed,
     Failed,
+    #[default]
     NotRun,
 }
 
+impl From<TestStatus> for PassState {
+    fn from(v: TestStatus) -> Self {
+        match v {
+            TestStatus::Passed => PassState::Passed,
+            TestStatus::EvmErr(_) | TestStatus::IncorrectAccountFinalState(_) => PassState::Failed,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize)]
-struct SerializableRunEntry {
+pub(crate) struct SerializableRunEntry {
     test_name: String,
     info: RunEntry,
 }
