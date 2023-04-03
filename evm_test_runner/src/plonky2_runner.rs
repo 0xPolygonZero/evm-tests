@@ -5,6 +5,7 @@ use std::{fmt::Display, time::Duration};
 
 use common::types::TestVariantRunInfo;
 use ethereum_types::H256;
+use futures::executor::block_on;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::trace;
 use plonky2::{
@@ -12,12 +13,16 @@ use plonky2::{
     util::timing::TimingTree,
 };
 use plonky2_evm::{all_stark::AllStark, config::StarkConfig, prover::prove_with_outputs};
+use tokio::select;
 
 use crate::{
     persistent_run_state::TestRunEntries,
     state_diff::StateDiff,
     test_dir_reading::{ParsedTestGroup, ParsedTestSubGroup, Test},
+    ProcessAbortedRecv,
 };
+
+pub(crate) type RunnerResult<T> = Result<T, ()>;
 
 trait TestProgressIndicator {
     fn set_current_test_name(&self, t_name: String);
@@ -155,14 +160,22 @@ pub(crate) fn run_plonky2_tests(
     parsed_tests: Vec<ParsedTestGroup>,
     simple_progress_indicator: bool,
     persistent_test_state: &mut TestRunEntries,
-) -> Vec<TestGroupRunResults> {
+    mut process_aborted: ProcessAbortedRecv,
+) -> RunnerResult<Vec<TestGroupRunResults>> {
     let num_tests = num_tests_in_groups(parsed_tests.iter());
     let mut p_indicator = create_progress_indicator(num_tests, simple_progress_indicator);
 
     parsed_tests
         .into_iter()
-        .map(|g| run_test_group(g, &mut p_indicator, persistent_test_state))
-        .collect()
+        .map(|g| {
+            run_test_group(
+                g,
+                &mut p_indicator,
+                persistent_test_state,
+                &mut process_aborted,
+            )
+        })
+        .collect::<RunnerResult<_>>()
 }
 
 fn create_progress_indicator(
@@ -191,48 +204,65 @@ fn run_test_group(
     group: ParsedTestGroup,
     p_indicator: &mut Box<dyn TestProgressIndicator>,
     persistent_test_state: &mut TestRunEntries,
-) -> TestGroupRunResults {
-    TestGroupRunResults {
+    process_aborted: &mut ProcessAbortedRecv,
+) -> RunnerResult<TestGroupRunResults> {
+    Ok(TestGroupRunResults {
         name: group.name,
         sub_group_res: group
             .sub_groups
             .into_iter()
-            .map(|sub_g| run_test_sub_group(sub_g, p_indicator, persistent_test_state))
-            .collect(),
-    }
+            .map(|sub_g| {
+                run_test_sub_group(sub_g, p_indicator, persistent_test_state, process_aborted)
+            })
+            .collect::<RunnerResult<_>>()?,
+    })
 }
 
 fn run_test_sub_group(
     sub_group: ParsedTestSubGroup,
     p_indicator: &mut Box<dyn TestProgressIndicator>,
     persistent_test_state: &mut TestRunEntries,
-) -> TestSubGroupRunResults {
-    TestSubGroupRunResults {
+    process_aborted: &mut ProcessAbortedRecv,
+) -> RunnerResult<TestSubGroupRunResults> {
+    Ok(TestSubGroupRunResults {
         name: sub_group.name,
         test_res: sub_group
             .tests
             .into_iter()
-            .map(|sub_g| run_test(sub_g, p_indicator, persistent_test_state))
-            .collect(),
-    }
+            .map(|sub_g| run_test(sub_g, p_indicator, persistent_test_state, process_aborted))
+            .collect::<RunnerResult<_>>()?,
+    })
 }
 
 fn run_test(
     test: Test,
     p_indicator: &mut Box<dyn TestProgressIndicator>,
     persistent_test_state: &mut TestRunEntries,
-) -> TestRunResult {
+    process_aborted: &mut ProcessAbortedRecv,
+) -> RunnerResult<TestRunResult> {
     trace!("Running test {}...", test.name);
 
     p_indicator.set_current_test_name(test.name.to_string());
-    let res = run_test_and_get_test_result(test.info);
+
+    let res = block_on(async {
+        let proof_gen_fut = async { run_test_and_get_test_result(test.info) };
+        let process_aborted_fut = process_aborted.recv();
+
+        select! {
+            res = proof_gen_fut => Ok(res),
+            _ = process_aborted_fut => Err(()),
+        }
+    })?;
+
+    // let res = run_test_and_get_test_result(test.info);
+
     persistent_test_state.update_test_state(&test.name, res.clone().into());
     p_indicator.notify_test_completed();
 
-    TestRunResult {
+    Ok(TestRunResult {
         name: test.name,
         status: res,
-    }
+    })
 }
 
 /// Run a test against `plonky2` and output a result based on what happens.

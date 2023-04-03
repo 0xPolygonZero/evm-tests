@@ -3,11 +3,13 @@
 use arg_parsing::{ProgArgs, ReportType};
 use clap::Parser;
 use common::utils::init_env_logger;
+use futures::executor::block_on;
 use log::info;
 use persistent_run_state::load_existing_pass_state_from_disk_if_exists_or_create;
 use plonky2_runner::run_plonky2_tests;
 use report_generation::output_test_report_for_terminal;
 use test_dir_reading::{get_default_parsed_tests_path, read_in_all_parsed_tests};
+use tokio::sync::mpsc;
 
 use crate::report_generation::write_overall_status_report_summary_to_file;
 
@@ -18,9 +20,13 @@ mod report_generation;
 mod state_diff;
 mod test_dir_reading;
 
+pub(crate) type ProcessAbortedRecv = mpsc::Receiver<()>;
+
 #[tokio::main()]
 async fn main() -> anyhow::Result<()> {
     init_env_logger();
+
+    let abort_recv = init_ctrl_c_handler();
 
     let ProgArgs {
         test_filter,
@@ -43,15 +49,22 @@ async fn main() -> anyhow::Result<()> {
         let t_names = parsed_tests
             .iter()
             .flat_map(|g| g.sub_groups.iter().map(|t| t.name.as_str()));
-        
+
         persistent_test_state.add_remove_entries_from_upstream_tests(t_names);
     }
 
-    let test_res = run_plonky2_tests(
+    let test_res = match run_plonky2_tests(
         parsed_tests,
         simple_progress_indicator,
         &mut persistent_test_state,
-    );
+        abort_recv,
+    ) {
+        Ok(r) => r,
+        Err(_) => {
+            persistent_test_state.write_to_disk();
+            return Ok(());
+        }
+    };
 
     match report_type {
         ReportType::Test => {
@@ -64,5 +77,20 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
+    persistent_test_state.write_to_disk();
+
     Ok(())
+}
+
+fn init_ctrl_c_handler() -> ProcessAbortedRecv {
+    // One-shot is better, but it forces us to create the channel in `main`.
+    let (send, recv) = mpsc::channel(1);
+
+    ctrlc::set_handler(move || {
+        info!("Abort signal received! Stopping currently running test...");
+        block_on(send.send(())).unwrap();
+    })
+    .unwrap();
+
+    recv
 }

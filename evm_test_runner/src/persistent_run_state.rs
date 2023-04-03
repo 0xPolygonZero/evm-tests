@@ -11,7 +11,16 @@ const PASS_STATE_PATH_STR: &str = "test_pass_state.state";
 pub(crate) struct TestRunEntries(HashMap<String, RunEntry>);
 
 impl TestRunEntries {
-    pub(crate) fn to_serializable(self) -> Vec<SerializableRunEntry> {
+    pub(crate) fn write_to_disk(self) {
+        let data = self.to_serializable();
+        let mut writer = csv::Writer::from_path(PASS_STATE_PATH_STR).unwrap();
+
+        for entry in data {
+            writer.serialize(entry).unwrap();
+        }
+    }
+
+    fn to_serializable(self) -> Vec<SerializableRunEntry> {
         self.0
             .into_iter()
             .map(|(test_name, data)| SerializableRunEntry {
