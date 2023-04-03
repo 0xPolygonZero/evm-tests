@@ -28,8 +28,8 @@ async fn main() -> anyhow::Result<()> {
         variant_filter,
         parsed_tests_path,
         simple_progress_indicator,
+        update_persistent_state_from_upstream,
     } = ProgArgs::parse();
-
     let mut persistent_test_state = load_existing_pass_state_from_disk_if_exists_or_create();
 
     let parsed_tests_path = parsed_tests_path
@@ -38,6 +38,15 @@ async fn main() -> anyhow::Result<()> {
 
     let parsed_tests =
         read_in_all_parsed_tests(&parsed_tests_path, test_filter.clone(), variant_filter).await?;
+
+    if update_persistent_state_from_upstream {
+        let t_names = parsed_tests
+            .iter()
+            .flat_map(|g| g.sub_groups.iter().map(|t| t.name.as_str()));
+        
+        persistent_test_state.add_remove_entries_from_upstream_tests(t_names);
+    }
+
     let test_res = run_plonky2_tests(
         parsed_tests,
         simple_progress_indicator,

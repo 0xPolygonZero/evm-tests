@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -31,8 +31,31 @@ impl TestRunEntries {
                 t_key
             )
         });
+
         entry.pass_state = state;
-        entry.last_run = chrono::Utc::now();
+        entry.last_run = Some(chrono::Utc::now());
+    }
+
+    pub(crate) fn add_remove_entries_from_upstream_tests<'a>(
+        &'a mut self,
+        upstream_tests: impl Iterator<Item = &'a str>,
+    ) {
+        let t_names_that_are_in_upstream: HashSet<_> =
+            upstream_tests.map(|s| s.to_string()).collect();
+
+        // Add any new tests that we don't know about.
+        for upstream_k in t_names_that_are_in_upstream.iter() {
+            if !self.0.contains_key(upstream_k) {
+                self.0.insert(upstream_k.clone(), Default::default());
+            }
+        }
+
+        // Remove any entries that are not longer in upstream.
+        for local_k in self.0.keys().cloned().collect::<Vec<_>>() {
+            if !t_names_that_are_in_upstream.contains(&local_k) {
+                self.0.remove(local_k.as_str());
+            }
+        }
     }
 }
 
@@ -67,10 +90,10 @@ pub(crate) struct SerializableRunEntry {
     info: RunEntry,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Default, Serialize)]
 struct RunEntry {
     pass_state: PassState,
-    last_run: DateTime<Utc>,
+    last_run: Option<DateTime<Utc>>,
 }
 
 pub(crate) fn load_existing_pass_state_from_disk_if_exists_or_create() -> TestRunEntries {

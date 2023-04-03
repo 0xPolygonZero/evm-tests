@@ -43,4 +43,10 @@ pub(crate) struct ProgArgs {
     /// stdout/stderr.
     #[arg(short, long, default_value_t = false)]
     pub(crate) simple_progress_indicator: bool,
+
+    /// Add/remove the persistent test pass state from the upstream parsed
+    /// tests. If a new test exists upstream, we add an entry to the persistent
+    /// state. If it's removed, we purge it from our persistent state.
+    #[arg(short = 'u', long, default_value_t = false)]
+    pub(crate) update_persistent_state_from_upstream: bool,
 }
