@@ -1,18 +1,19 @@
 use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
+use log::info;
 use serde::{Deserialize, Serialize};
 
 use crate::plonky2_runner::TestStatus;
 
-const PASS_STATE_PATH_STR: &str = "test_pass_state.state";
+const PASS_STATE_PATH_STR: &str = "test_pass_state";
 
 #[derive(Debug, Default)]
 pub(crate) struct TestRunEntries(HashMap<String, RunEntry>);
 
 impl TestRunEntries {
     pub(crate) fn write_to_disk(self) {
-        let data = self.to_serializable();
+        let data = self.into_serializable();
         let mut writer = csv::Writer::from_path(PASS_STATE_PATH_STR).unwrap();
 
         for entry in data {
@@ -20,34 +21,32 @@ impl TestRunEntries {
         }
     }
 
-    fn to_serializable(self) -> Vec<SerializableRunEntry> {
-        self.0
+    fn into_serializable(self) -> Vec<SerializableRunEntry> {
+        let mut data: Vec<_> = self
+            .0
             .into_iter()
             .map(|(test_name, data)| SerializableRunEntry {
                 test_name,
-                info: RunEntry {
-                    pass_state: data.pass_state,
-                    last_run: data.last_run,
-                },
+                pass_state: data.pass_state,
+                last_run: data.last_run,
             })
-            .collect()
+            .collect();
+
+        data.sort_unstable_by(|e1, e2| e1.test_name.cmp(&e2.test_name));
+        data
     }
 
     pub(crate) fn update_test_state(&mut self, t_key: &str, state: PassState) {
-        let entry = self.0.get_mut(t_key).unwrap_or_else(|| {
-            panic!(
-                "Tried to update the pass state of the test \"{}\" but it did not exist!",
-                t_key
-            )
-        });
-
-        entry.pass_state = state;
-        entry.last_run = Some(chrono::Utc::now());
+        self.0
+            .entry(t_key.to_string())
+            .and_modify(|entry| *entry = RunEntry::new(state))
+            .or_insert_with(|| RunEntry::new(state));
     }
 
     pub(crate) fn add_remove_entries_from_upstream_tests<'a>(
         &'a mut self,
         upstream_tests: impl Iterator<Item = &'a str>,
+        filter_in_use: bool,
     ) {
         let t_names_that_are_in_upstream: HashSet<_> =
             upstream_tests.map(|s| s.to_string()).collect();
@@ -57,6 +56,11 @@ impl TestRunEntries {
             if !self.0.contains_key(upstream_k) {
                 self.0.insert(upstream_k.clone(), Default::default());
             }
+        }
+
+        if filter_in_use {
+            info!("Skipping checking for entries that may have been removed upstream due to test filters being in use...");
+            return;
         }
 
         // Remove any entries that are not longer in upstream.
@@ -70,13 +74,19 @@ impl TestRunEntries {
 
 impl From<Vec<SerializableRunEntry>> for TestRunEntries {
     fn from(v: Vec<SerializableRunEntry>) -> Self {
-        TestRunEntries(HashMap::from_iter(
-            v.into_iter().map(|e| (e.test_name, e.info)),
-        ))
+        TestRunEntries(HashMap::from_iter(v.into_iter().map(|e| {
+            (
+                e.test_name,
+                RunEntry {
+                    pass_state: e.pass_state,
+                    last_run: e.last_run,
+                },
+            )
+        })))
     }
 }
 
-#[derive(Debug, Deserialize, Default, Serialize)]
+#[derive(Copy, Clone, Debug, Deserialize, Default, Serialize)]
 pub(crate) enum PassState {
     Passed,
     Failed,
@@ -96,7 +106,8 @@ impl From<TestStatus> for PassState {
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct SerializableRunEntry {
     test_name: String,
-    info: RunEntry,
+    pass_state: PassState,
+    last_run: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize, Default, Serialize)]
@@ -105,11 +116,28 @@ struct RunEntry {
     last_run: Option<DateTime<Utc>>,
 }
 
+impl RunEntry {
+    fn new(pass_state: PassState) -> Self {
+        Self {
+            pass_state,
+            last_run: Some(chrono::Utc::now()),
+        }
+    }
+}
+
 pub(crate) fn load_existing_pass_state_from_disk_if_exists_or_create() -> TestRunEntries {
-    let mut reader = csv::Reader::from_path(PASS_STATE_PATH_STR).unwrap();
-    reader
-        .deserialize()
-        .map(|r| r.unwrap())
-        .collect::<Vec<_>>()
-        .into()
+    csv::Reader::from_path(PASS_STATE_PATH_STR)
+        .map(|mut reader| {
+            info!("Found existing test run state on disk.");
+
+            reader
+                .deserialize()
+                .map(|r| r.unwrap())
+                .collect::<Vec<_>>()
+                .into()
+        })
+        .unwrap_or_else(|_| {
+            info!("No existing test run state found.");
+            TestRunEntries::default()
+        })
 }

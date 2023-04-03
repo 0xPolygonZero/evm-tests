@@ -1,11 +1,10 @@
 //! Handles feeding the parsed tests into `plonky2` and determining the result.
 //! Essentially converts parsed tests into test results.
 
-use std::{fmt::Display, time::Duration};
+use std::{fmt::Display, sync::atomic::Ordering, time::Duration};
 
 use common::types::TestVariantRunInfo;
 use ethereum_types::H256;
-use futures::executor::block_on;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::trace;
 use plonky2::{
@@ -13,7 +12,6 @@ use plonky2::{
     util::timing::TimingTree,
 };
 use plonky2_evm::{all_stark::AllStark, config::StarkConfig, prover::prove_with_outputs};
-use tokio::select;
 
 use crate::{
     persistent_run_state::TestRunEntries,
@@ -238,23 +236,17 @@ fn run_test(
     test: Test,
     p_indicator: &mut Box<dyn TestProgressIndicator>,
     persistent_test_state: &mut TestRunEntries,
-    process_aborted: &mut ProcessAbortedRecv,
+    process_aborted: &ProcessAbortedRecv,
 ) -> RunnerResult<TestRunResult> {
     trace!("Running test {}...", test.name);
 
     p_indicator.set_current_test_name(test.name.to_string());
+    let res = run_test_and_get_test_result(test.info);
 
-    let res = block_on(async {
-        let proof_gen_fut = async { run_test_and_get_test_result(test.info) };
-        let process_aborted_fut = process_aborted.recv();
-
-        select! {
-            res = proof_gen_fut => Ok(res),
-            _ = process_aborted_fut => Err(()),
-        }
-    })?;
-
-    // let res = run_test_and_get_test_result(test.info);
+    if process_aborted.load(Ordering::Relaxed) {
+        // Stop running more tests.
+        return Err(());
+    }
 
     persistent_test_state.update_test_state(&test.name, res.clone().into());
     p_indicator.notify_test_completed();
