@@ -839,6 +839,7 @@ dependencies = [
  "ethereum-types",
  "flexi_logger",
  "futures",
+ "humantime",
  "indicatif",
  "keccak-hash 0.10.0",
  "log",

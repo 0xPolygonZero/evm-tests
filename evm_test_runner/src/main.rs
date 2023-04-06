@@ -1,18 +1,20 @@
 #![feature(let_chains)]
 
-use std::{
-    rc::Rc,
-    sync::{atomic::AtomicBool, Arc},
-};
+use std::rc::Rc;
 
 use arg_parsing::{ProgArgs, ReportType};
 use clap::Parser;
 use common::utils::init_env_logger;
+use futures::executor::block_on;
 use log::info;
 use persistent_run_state::load_existing_pass_state_from_disk_if_exists_or_create;
 use plonky2_runner::run_plonky2_tests;
 use report_generation::output_test_report_for_terminal;
 use test_dir_reading::{get_default_parsed_tests_path, read_in_all_parsed_tests};
+use tokio::{
+    runtime::{self},
+    sync::mpsc,
+};
 
 use crate::report_generation::write_overall_status_report_summary_to_file;
 
@@ -23,21 +25,43 @@ mod report_generation;
 mod state_diff;
 mod test_dir_reading;
 
-pub(crate) type ProcessAbortedRecv = Arc<AtomicBool>;
+// Oneshot is ideal here, but I can't get it to the abort handler.
+pub(crate) type ProcessAbortedRecv = mpsc::Receiver<()>;
 
-#[tokio::main()]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     init_env_logger();
+
+    let rt = runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("Creating Tokio runtime");
+    let res = rt.block_on(run());
+
+    match res {
+        // True if we exited without an error but need to stop any Plonky2 threads.
+        Ok(true) | Err(_) => {
+            // Don't wait for any plonky2 threads to finish.
+            rt.shutdown_background();
+        }
+        _ => (),
+    };
+
+    res.map(|_| ())
+}
+
+async fn run() -> anyhow::Result<bool> {
     let abort_recv = init_ctrl_c_handler();
 
     let ProgArgs {
         test_filter,
         report_type,
         variant_filter,
+        test_timeout,
         parsed_tests_path,
         simple_progress_indicator,
         update_persistent_state_from_upstream,
     } = ProgArgs::parse();
+
     let mut persistent_test_state = load_existing_pass_state_from_disk_if_exists_or_create();
     let filters_used = test_filter.is_some() || variant_filter.is_some();
 
@@ -82,11 +106,14 @@ async fn main() -> anyhow::Result<()> {
         simple_progress_indicator,
         &mut persistent_test_state,
         abort_recv,
+        test_timeout.map(|t| t.into()),
     ) {
         Ok(r) => r,
         Err(_) => {
+            println!("Got an error. Writing to disk...");
             persistent_test_state.write_to_disk();
-            return Ok(());
+
+            return Ok(true);
         }
     };
 
@@ -103,18 +130,17 @@ async fn main() -> anyhow::Result<()> {
 
     persistent_test_state.write_to_disk();
 
-    Ok(())
+    Ok(false)
 }
 
 fn init_ctrl_c_handler() -> ProcessAbortedRecv {
-    let aborted_bool = Arc::new(AtomicBool::new(false));
+    let (send, recv) = mpsc::channel(2);
 
-    let cloned_aborted_bool = aborted_bool.clone();
     ctrlc::set_handler(move || {
         println!("Abort signal received! Stopping currently running test...");
-        cloned_aborted_bool.store(true, std::sync::atomic::Ordering::Relaxed);
+        block_on(send.send(())).unwrap();
     })
     .unwrap();
 
-    aborted_bool
+    recv
 }

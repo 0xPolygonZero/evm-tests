@@ -92,7 +92,9 @@ impl From<TestStatus> for PassState {
     fn from(v: TestStatus) -> Self {
         match v {
             TestStatus::Passed => PassState::Passed,
-            TestStatus::EvmErr(_) | TestStatus::IncorrectAccountFinalState(_) => PassState::Failed,
+            TestStatus::EvmErr(_)
+            | TestStatus::IncorrectAccountFinalState(_)
+            | TestStatus::TimedOut => PassState::Failed,
         }
     }
 }
