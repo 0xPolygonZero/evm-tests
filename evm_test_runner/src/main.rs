@@ -1,6 +1,9 @@
 #![feature(let_chains)]
 
-use std::sync::{atomic::AtomicBool, Arc};
+use std::{
+    rc::Rc,
+    sync::{atomic::AtomicBool, Arc},
+};
 
 use arg_parsing::{ProgArgs, ReportType};
 use clap::Parser;
@@ -36,16 +39,28 @@ async fn main() -> anyhow::Result<()> {
         update_persistent_state_from_upstream,
     } = ProgArgs::parse();
     let mut persistent_test_state = load_existing_pass_state_from_disk_if_exists_or_create();
+    let filters_used = test_filter.is_some() || variant_filter.is_some();
 
     let parsed_tests_path = parsed_tests_path
         .map(Ok)
         .unwrap_or_else(get_default_parsed_tests_path)?;
 
-    let parsed_tests =
-        read_in_all_parsed_tests(&parsed_tests_path, test_filter.clone(), variant_filter).await?;
+    let parsed_tests = Rc::new(
+        read_in_all_parsed_tests(&parsed_tests_path, test_filter.clone(), variant_filter).await?,
+    );
 
     if update_persistent_state_from_upstream {
         println!("Updating persisted test pass state from locally downloaded tests...");
+
+        let parsed_tests = match filters_used {
+            false => parsed_tests.clone(),
+
+            // I too like lifetime issues...
+            // If filters are used, then we need to reparse the tests.
+            // `add_remove_entries_from_upstream_tests` requires all the tests in the test directory
+            // in order to function correctly.
+            true => Rc::new(read_in_all_parsed_tests(&parsed_tests_path, None, None).await?),
+        };
 
         let t_names = parsed_tests
             .iter()
@@ -56,9 +71,11 @@ async fn main() -> anyhow::Result<()> {
             })
             .flatten();
 
-        persistent_test_state
-            .add_remove_entries_from_upstream_tests(t_names, test_filter.is_some());
+        persistent_test_state.add_remove_entries_from_upstream_tests(t_names);
     }
+
+    // Remove the Rc since we no longer need it.
+    let parsed_tests = Rc::try_unwrap(parsed_tests).unwrap();
 
     let test_res = match run_plonky2_tests(
         parsed_tests,

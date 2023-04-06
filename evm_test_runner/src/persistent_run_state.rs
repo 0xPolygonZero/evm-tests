@@ -46,7 +46,6 @@ impl TestRunEntries {
     pub(crate) fn add_remove_entries_from_upstream_tests<'a>(
         &'a mut self,
         upstream_tests: impl Iterator<Item = &'a str>,
-        filter_in_use: bool,
     ) {
         let t_names_that_are_in_upstream: HashSet<_> =
             upstream_tests.map(|s| s.to_string()).collect();
@@ -56,11 +55,6 @@ impl TestRunEntries {
             if !self.0.contains_key(upstream_k) {
                 self.0.insert(upstream_k.clone(), Default::default());
             }
-        }
-
-        if filter_in_use {
-            info!("Skipping checking for entries that may have been removed upstream due to test filters being in use...");
-            return;
         }
 
         // Remove any entries that are not longer in upstream.
