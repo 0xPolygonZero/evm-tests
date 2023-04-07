@@ -37,6 +37,10 @@ pub(crate) struct ProgArgs {
     #[arg(short = 'f', long)]
     pub(crate) test_filter: Option<String>,
 
+    /// Do not run tests that have already passed in the past.
+    #[arg(short = 'p', long)]
+    pub(crate) skip_passed: bool,
+
     /// Mark a test as timed out if it takes longer than this amount of time.
     #[arg(short = 't', long)]
     pub(crate) test_timeout: Option<humantime::Duration>,

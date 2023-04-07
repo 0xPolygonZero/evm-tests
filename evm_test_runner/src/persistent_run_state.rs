@@ -64,6 +64,12 @@ impl TestRunEntries {
             }
         }
     }
+
+    pub(crate) fn get_tests_that_have_passed(&self) -> impl Iterator<Item = &str> {
+        self.0.iter().filter_map(|(name, info)| {
+            matches!(info.pass_state, PassState::Passed).then(|| name.as_str())
+        })
+    }
 }
 
 impl From<Vec<SerializableRunEntry>> for TestRunEntries {

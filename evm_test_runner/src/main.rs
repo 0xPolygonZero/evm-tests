@@ -1,6 +1,6 @@
 #![feature(let_chains)]
 
-use std::rc::Rc;
+use std::{rc::Rc, sync::Arc};
 
 use arg_parsing::{ProgArgs, ReportType};
 use clap::Parser;
@@ -56,21 +56,35 @@ async fn run() -> anyhow::Result<bool> {
         test_filter,
         report_type,
         variant_filter,
+        skip_passed,
         test_timeout,
         parsed_tests_path,
         simple_progress_indicator,
         update_persistent_state_from_upstream,
     } = ProgArgs::parse();
-
     let mut persistent_test_state = load_existing_pass_state_from_disk_if_exists_or_create();
     let filters_used = test_filter.is_some() || variant_filter.is_some();
+    let passed_t_names = skip_passed.then(|| {
+        Arc::new(
+            persistent_test_state
+                .get_tests_that_have_passed()
+                .map(|t| t.to_string())
+                .collect(),
+        )
+    });
 
     let parsed_tests_path = parsed_tests_path
         .map(Ok)
         .unwrap_or_else(get_default_parsed_tests_path)?;
 
     let parsed_tests = Rc::new(
-        read_in_all_parsed_tests(&parsed_tests_path, test_filter.clone(), variant_filter).await?,
+        read_in_all_parsed_tests(
+            &parsed_tests_path,
+            test_filter.clone(),
+            variant_filter,
+            passed_t_names,
+        )
+        .await?,
     );
 
     if update_persistent_state_from_upstream {
@@ -83,7 +97,7 @@ async fn run() -> anyhow::Result<bool> {
             // If filters are used, then we need to reparse the tests.
             // `add_remove_entries_from_upstream_tests` requires all the tests in the test directory
             // in order to function correctly.
-            true => Rc::new(read_in_all_parsed_tests(&parsed_tests_path, None, None).await?),
+            true => Rc::new(read_in_all_parsed_tests(&parsed_tests_path, None, None, None).await?),
         };
 
         let t_names = parsed_tests
