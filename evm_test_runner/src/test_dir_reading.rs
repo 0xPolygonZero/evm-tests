@@ -8,7 +8,11 @@
 
 // High code duplication. Difficult to reduce, but may want to tackle later.
 
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use anyhow::{anyhow, Context};
 use common::{
@@ -62,6 +66,7 @@ pub(crate) async fn read_in_all_parsed_tests(
     parsed_tests_path: &Path,
     filter_str: Option<String>,
     variant_filter: Option<VariantFilterType>,
+    blacklist: Option<Arc<HashSet<String>>>,
 ) -> anyhow::Result<Vec<ParsedTestGroup>> {
     let (mut groups, mut join_set, mut read_dirs) =
         parse_dir_init(Path::new(parsed_tests_path)).await?;
@@ -77,6 +82,7 @@ pub(crate) async fn read_in_all_parsed_tests(
             entry.path(),
             filter_str.clone(),
             variant_filter.clone(),
+            blacklist.clone(),
         ));
     }
 
@@ -89,6 +95,7 @@ async fn parse_test_group(
     path: PathBuf,
     filter_str: Option<String>,
     variant_filter: Option<VariantFilterType>,
+    blacklist: Option<Arc<HashSet<String>>>,
 ) -> anyhow::Result<ParsedTestGroup> {
     info!("Reading in test group {:?}...", path);
     let (mut sub_groups, mut join_set, mut read_dirs) = parse_dir_init(&path).await?;
@@ -104,6 +111,7 @@ async fn parse_test_group(
             entry.path(),
             filter_str.clone(),
             variant_filter.clone(),
+            blacklist.clone(),
         ));
     }
 
@@ -119,6 +127,7 @@ async fn parse_test_sub_group(
     path: PathBuf,
     filter_str: Option<String>,
     variant_filter: Option<VariantFilterType>,
+    blacklist: Option<Arc<HashSet<String>>>,
 ) -> anyhow::Result<ParsedTestSubGroup> {
     trace!("Reading in test subgroup {:?}...", path);
     let (mut tests, mut join_set, mut read_dirs) = parse_dir_init(&path).await?;
@@ -127,12 +136,15 @@ async fn parse_test_sub_group(
         let entry = entry?;
         let file_path = entry.path();
 
-        // Reject test if the filter string does not match.
-        if let Some(ref filter_str) = filter_str && !file_path.to_str().map_or(false, |path_str| path_str.contains(filter_str)) {
+        if test_is_not_in_filter_str(&filter_str, &file_path) {
             continue;
         }
 
-        join_set.spawn(parse_test(file_path, variant_filter.clone()));
+        join_set.spawn(parse_test(
+            file_path,
+            variant_filter.clone(),
+            blacklist.clone(),
+        ));
     }
 
     wait_for_task_to_finish_and_extend_vec(&mut join_set, &mut tests).await?;
@@ -143,9 +155,22 @@ async fn parse_test_sub_group(
     })
 }
 
+fn blacklisted(blacklist: Option<&HashSet<String>>, t_name: &str) -> bool {
+    blacklist.map_or(false, |b_list| b_list.contains(t_name))
+}
+
+fn test_is_not_in_filter_str(filter_str: &Option<String>, file_path: &Path) -> bool {
+    filter_str.as_ref().map_or(false, |f_str| {
+        file_path
+            .to_str()
+            .map_or(false, |p_str| !p_str.contains(f_str))
+    })
+}
+
 async fn parse_test(
     path: PathBuf,
     variant_filter: Option<VariantFilterType>,
+    blacklist: Option<Arc<HashSet<String>>>,
 ) -> anyhow::Result<Vec<Test>> {
     trace!("Reading in {:?}...", path);
 
@@ -153,20 +178,21 @@ async fn parse_test(
     let parsed_test: ParsedTestManifest = serde_cbor::from_slice(&parsed_test_bytes)
         .unwrap_or_else(|_| panic!("Unable to parse the test {:?} (bad format)", path));
 
-    let test_variants = parsed_test.into_filtered_variants(variant_filter);
+    let v_out = parsed_test.into_filtered_variants(variant_filter);
 
     let root_test_name = get_file_stem(&path)?;
-    let t_name_f: Box<dyn Fn(usize) -> String> = match test_variants.len() {
-        1 => Box::new(|_| root_test_name.clone()),
+    let t_name_f: Box<dyn Fn(usize) -> String> = match v_out.variants.len() {
+        1 if v_out.tot_variants_without_filter == 1 => Box::new(|_| root_test_name.clone()),
         _ => Box::new(|i| format!("{}_{}", root_test_name, i)),
     };
 
-    Ok(test_variants
+    let blacklist_ref = blacklist.as_deref();
+    Ok(v_out
+        .variants
         .into_iter()
-        .enumerate()
-        .map(|(i, info)| Test {
-            name: t_name_f(i),
-            info,
+        .filter_map(|info| {
+            let name = t_name_f(info.variant_idx);
+            (!blacklisted(blacklist_ref, &name)).then_some(Test { name, info })
         })
         .collect())
 }

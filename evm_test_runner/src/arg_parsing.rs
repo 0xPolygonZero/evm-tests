@@ -21,21 +21,29 @@ pub(crate) struct ProgArgs {
     /// The path to the parsed tests directory.
     pub(crate) parsed_tests_path: Option<PathBuf>,
 
-    #[arg(short='r', long, value_enum, default_value_t=ReportType::Test)]
     /// The type of report to generate.
+    #[arg(short='r', long, value_enum, default_value_t=ReportType::Test)]
     pub(crate) report_type: ReportType,
 
-    #[arg(short, long)]
     /// Only run test variants that match this index (either a single value or a
     /// range).
     ///
     /// Eg: `0`, `0..=5`
+    #[arg(short, long)]
     pub(crate) variant_filter: Option<VariantFilterType>,
 
-    #[arg(short = 'f', long)]
     /// An optional filter to only run tests that are a subset of the given
     /// test path.
+    #[arg(short = 'f', long)]
     pub(crate) test_filter: Option<String>,
+
+    /// Do not run tests that have already passed in the past.
+    #[arg(short = 'p', long)]
+    pub(crate) skip_passed: bool,
+
+    /// Mark a test as timed out if it takes longer than this amount of time.
+    #[arg(short = 't', long)]
+    pub(crate) test_timeout: Option<humantime::Duration>,
 
     /// Use a simple progress indicator that relies on `println!`s instead of an
     /// actual progress bar to display the current test status. In some
@@ -43,4 +51,10 @@ pub(crate) struct ProgArgs {
     /// stdout/stderr.
     #[arg(short, long, default_value_t = false)]
     pub(crate) simple_progress_indicator: bool,
+
+    /// Add/remove the persistent test pass state from the upstream parsed
+    /// tests. If a new test exists upstream, we add an entry to the persistent
+    /// state. If it's removed, we purge it from our persistent state.
+    #[arg(short = 'u', long, default_value_t = false)]
+    pub(crate) update_persistent_state_from_upstream: bool,
 }

@@ -20,11 +20,16 @@ pub struct ParsedTestManifest {
     pub revm_variants: Option<Vec<SerializableEVMInstance>>,
 }
 
+pub struct FilteredVariantsOutput {
+    pub variants: Vec<TestVariantRunInfo>,
+    pub tot_variants_without_filter: usize,
+}
+
 impl ParsedTestManifest {
     pub fn into_filtered_variants(
         self,
         v_filter: Option<VariantFilterType>,
-    ) -> Vec<TestVariantRunInfo> {
+    ) -> FilteredVariantsOutput {
         // If `self.revm_variants` is None, the parser was unable to generate an `revm`
         // instance for any test variant. This occurs when some shared test data was
         // unable to be parsed (e.g. the `transaction` section). In this case, we
@@ -39,7 +44,10 @@ impl ParsedTestManifest {
             Some(v) => v.into_iter().map(Some).collect(),
         };
 
-        self.plonky2_variants
+        let tot_variants_without_filter = self.plonky2_variants.test_variants.len();
+
+        let variants = self
+            .plonky2_variants
             .test_variants
             .into_iter()
             .zip(revm_variants.into_iter())
@@ -49,7 +57,7 @@ impl ParsedTestManifest {
                 Some(VariantFilterType::Range(r)) => r.contains(variant_idx),
                 None => true,
             })
-            .map(|(_, (t_var, revm_variant))| {
+            .map(|(variant_idx, (t_var, revm_variant))| {
                 let gen_inputs = GenerationInputs {
                     signed_txns: vec![t_var.txn_bytes],
                     tries: self.plonky2_variants.const_plonky2_inputs.tries.clone(),
@@ -70,9 +78,15 @@ impl ParsedTestManifest {
                     gen_inputs,
                     common: t_var.common,
                     revm_variant,
+                    variant_idx,
                 }
             })
-            .collect()
+            .collect();
+
+        FilteredVariantsOutput {
+            variants,
+            tot_variants_without_filter,
+        }
     }
 }
 
@@ -100,6 +114,7 @@ pub struct TestVariantRunInfo {
     pub gen_inputs: GenerationInputs,
     pub common: TestVariantCommon,
     pub revm_variant: Option<SerializableEVMInstance>,
+    pub variant_idx: usize,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
