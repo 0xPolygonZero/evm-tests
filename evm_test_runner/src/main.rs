@@ -124,9 +124,7 @@ async fn run() -> anyhow::Result<bool> {
     ) {
         Ok(r) => r,
         Err(_) => {
-            println!("Got an error. Writing to disk...");
             persistent_test_state.write_to_disk();
-
             return Ok(true);
         }
     };

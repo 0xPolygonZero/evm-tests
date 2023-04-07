@@ -6,13 +6,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::plonky2_runner::TestStatus;
 
-const PASS_STATE_PATH_STR: &str = "test_pass_state";
+const PASS_STATE_PATH_STR: &str = "test_pass_state.csv";
 
 #[derive(Debug, Default)]
 pub(crate) struct TestRunEntries(HashMap<String, RunEntry>);
 
 impl TestRunEntries {
     pub(crate) fn write_to_disk(self) {
+        println!("Persisting test pass state to disk...");
+
         let data = self.into_serializable();
         let mut writer = csv::Writer::from_path(PASS_STATE_PATH_STR).unwrap();
 
