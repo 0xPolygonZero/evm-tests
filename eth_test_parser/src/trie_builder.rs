@@ -71,7 +71,7 @@ impl TestBody {
 
         let test_variants = self
             .post
-            .merge
+            .shanghai
             .iter()
             .map(|x| TestVariant {
                 txn_bytes: x.txbytes.0.clone(),
@@ -140,7 +140,7 @@ impl TestBody {
     #[allow(unused)] // TODO: Will be used later.
     fn get_txn_trie(&self) -> HashedPartialTrie {
         self.post
-            .merge
+            .shanghai
             .iter()
             .enumerate()
             .map(|(txn_idx, post)| {
