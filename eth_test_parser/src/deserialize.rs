@@ -126,7 +126,7 @@ pub(crate) struct PostState {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub(crate) struct Post {
-    pub(crate) merge: Vec<PostState>,
+    pub(crate) shanghai: Vec<PostState>,
 }
 
 #[derive(Deserialize, Debug)]

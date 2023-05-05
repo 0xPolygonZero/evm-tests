@@ -101,7 +101,7 @@ impl TestBody {
 
         Ok(self
             .post
-            .merge
+            .shanghai
             .iter()
             .map(|m| Env {
                 cfg: cfg.clone(),
