@@ -16,7 +16,7 @@ use plonky2::{
     util::timing::TimingTree,
 };
 use plonky2_evm::{all_stark::AllStark, config::StarkConfig, prover::prove_with_outputs};
-use tokio::{select, task::spawn_blocking, time::timeout};
+use tokio::{select, time::timeout};
 
 use crate::{
     persistent_run_state::TestRunEntries,
@@ -273,14 +273,14 @@ fn run_test_or_fail_on_timeout(
     t_state: &mut TestRunState,
 ) -> RunnerResult<TestStatus> {
     block_on(async {
-        let proof_gen_fut = spawn_blocking(|| run_test_and_get_test_result(test));
+        let proof_gen_fut = async { run_test_and_get_test_result(test) };
         let proof_gen_with_timeout_fut = timeout(t_state.test_timeout, proof_gen_fut);
         let process_aborted_fut = t_state.process_aborted_recv.recv();
 
         select! {
             res = proof_gen_with_timeout_fut => {
                 match res {
-                    Ok(t_res) => Ok(t_res.unwrap()),
+                    Ok(t_res) => Ok(t_res),
                     Err(_) => Ok(TestStatus::TimedOut),
                 }
             },
