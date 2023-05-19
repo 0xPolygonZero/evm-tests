@@ -9,24 +9,23 @@ edition = "2021"
 
 [dependencies]
 common = { path = "../common" }
-eth_trie_utils = "0.5.0"
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "b667c07497d5343e5d239a5980debf6401ac775f" }
+eth_trie_utils = "0.6.0"
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "beefc91d73d9c0211f65f7e12ce6403f37d8c336" }
 
-anyhow = { version = "1.0.66", features = ["backtrace"] }
-clap = {version = "4.1.8", features = ["derive"] }
-ethereum-types = "0.14.0"
+anyhow = { version = "1.0.71", features = ["backtrace"] }
+clap = {version = "4.2.7", features = ["derive"] }
+ethereum-types = "0.14.1"
 hex = { version = "0.4.3", features = ["serde"] }
-flexi_logger = { version = "0.25.1", features = ["async"] }
+flexi_logger = { version = "0.25.4", features = ["async"] }
 keccak-hash = "0.10.0"
 log = "0.4.17"
 rlp = "0.5.2"
 rlp-derive = "0.1.0"
-serde = "1.0.147"
-serde_bytes = "0.11.7"
-serde_json = "1.0.87"
-serde_with = "2.0.1"
+serde = "1.0.163"
+serde_json = "1.0.96"
+serde_with = "3.0.0"
 serde_cbor = "0.11.2"
-tokio = { version = "1.21.2", features = ["full"] }
-futures = "0.3.25"
-revm = { version = "3.0.0", features = ["serde"] }
-ruint = { version = "1.7.0", features = ["primitive-types"] }
+tokio = { version = "1.28.1", features = ["full"] }
+futures = "0.3.28"
+revm = { version = "3.3.0", features = ["serde"] }
+ruint = { version = "1.8.0", features = ["primitive-types"] }

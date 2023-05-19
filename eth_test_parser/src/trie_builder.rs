@@ -16,7 +16,7 @@ use eth_trie_utils::{
     nibbles::Nibbles,
     partial_trie::{HashedPartialTrie, PartialTrie},
 };
-use ethereum_types::{Address, H160, H256, U256};
+use ethereum_types::{Address, H256, U256};
 use keccak_hash::keccak;
 use plonky2_evm::{generation::TrieInputs, proof::BlockMetadata};
 use rlp::Encodable;
@@ -96,7 +96,7 @@ impl TestBody {
         }
     }
 
-    fn get_storage_tries(&self) -> Vec<(H160, HashedPartialTrie)> {
+    fn get_storage_tries(&self) -> Vec<(H256, HashedPartialTrie)> {
         self.pre
             .iter()
             .map(|(acc_key, pre_acc)| {
@@ -111,18 +111,18 @@ impl TestBody {
                     })
                     .collect();
 
-                (*acc_key, storage_trie)
+                (hash(acc_key.as_bytes()), storage_trie)
             })
             .collect()
     }
 
-    fn get_state_trie(&self, storage_tries: &[(H160, HashedPartialTrie)]) -> HashedPartialTrie {
+    fn get_state_trie(&self, storage_tries: &[(H256, HashedPartialTrie)]) -> HashedPartialTrie {
         self.pre
             .iter()
             .map(|(acc_key, pre_acc)| {
                 let addr_hash = hash(acc_key.as_bytes());
                 let code_hash = hash(&pre_acc.code.0);
-                let storage_hash = get_storage_hash(acc_key, storage_tries);
+                let storage_hash = get_storage_hash(&addr_hash, storage_tries);
 
                 let rlp = AccountRlp {
                     nonce: pre_acc.nonce,
@@ -159,10 +159,13 @@ impl From<TestBody> for Plonky2ParsedTest {
     }
 }
 
-fn get_storage_hash(account_address: &H160, storage_tries: &[(H160, HashedPartialTrie)]) -> H256 {
+fn get_storage_hash(
+    hashed_account_address: &H256,
+    storage_tries: &[(H256, HashedPartialTrie)],
+) -> H256 {
     storage_tries
         .iter()
-        .find(|(addr, _)| account_address == addr)
+        .find(|(addr, _)| hashed_account_address == addr)
         .unwrap()
         .1
         .hash()
