@@ -103,7 +103,7 @@ impl TestBody {
                 let storage_trie = pre_acc
                     .storage
                     .iter()
-                    .filter(|(_,v)| !v.is_zero())
+                    .filter(|(_, v)| !v.is_zero())
                     .map(|(k, v)| {
                         (
                             Nibbles::from_h256_be(hash(&u256_to_be_bytes(*k))),
