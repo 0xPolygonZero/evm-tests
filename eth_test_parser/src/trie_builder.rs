@@ -40,7 +40,7 @@ impl Env {
             block_number: self.current_number,
             block_difficulty: self.current_difficulty,
             block_gaslimit: self.current_gas_limit,
-            block_chain_id: config::MATIC_CHAIN_ID.into(),
+            block_chain_id: config::ETHEREUM_CHAIN_ID.into(),
             block_base_fee: self.current_base_fee,
         }
     }
