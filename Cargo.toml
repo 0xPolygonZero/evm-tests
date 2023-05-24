@@ -5,6 +5,10 @@ members = [
     "common",
 ]
 
+[profile.release]
+lto = "fat"
+codegen-units = 1
+
 # TODO: Remove once `plonky_evm` gets a version on `crates.io`...
 # Since we can only use `plonky2_evm` using a git revision (which also causes us to use `plonky2` with
 # a reivison), any deps that also use `plonky2`/`plonky2_evm` are very often going to be using imcompatable
