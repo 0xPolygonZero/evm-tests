@@ -10,8 +10,8 @@ members = [
 # a reivison), any deps that also use `plonky2`/`plonky2_evm` are very often going to be using imcompatable
 # revisions. We can solve this for now by using a `[patch]` section to force all deps to use a specific version,
 [patch."https://github.com/mir-protocol/plonky2.git"]
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git?rev=beefc91d73d9c0211f65f7e12ce6403f37d8c336" }
-plonky2 = { git = "https://github.com/mir-protocol/plonky2.git?rev=beefc91d73d9c0211f65f7e12ce6403f37d8c336" }
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git?rev=c0abefdaf55f45fe820502688e442a5b958d1929" }
+plonky2 = { git = "https://github.com/mir-protocol/plonky2.git?rev=c0abefdaf55f45fe820502688e442a5b958d1929" }
 
 [patch.crates-io]
-plonky2 = { git = "https://github.com/mir-protocol/plonky2.git?rev=beefc91d73d9c0211f65f7e12ce6403f37d8c336" }
+plonky2 = { git = "https://github.com/mir-protocol/plonky2.git?rev=c0abefdaf55f45fe820502688e442a5b958d1929" }

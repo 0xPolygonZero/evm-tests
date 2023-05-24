@@ -9,8 +9,8 @@ edition = "2021"
 
 [dependencies]
 common = { path = "../common" }
-plonky2 = { git = "https://github.com/mir-protocol/plonky2.git", rev = "beefc91d73d9c0211f65f7e12ce6403f37d8c336" }
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "beefc91d73d9c0211f65f7e12ce6403f37d8c336" }
+plonky2 = { git = "https://github.com/mir-protocol/plonky2.git", rev = "c0abefdaf55f45fe820502688e442a5b958d1929" }
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "c0abefdaf55f45fe820502688e442a5b958d1929" }
 
 anyhow = { version = "1.0", features = ["backtrace"] }
 askama = "0.12.0"
