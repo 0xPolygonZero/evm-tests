@@ -15,7 +15,9 @@ use plonky2::{
     field::goldilocks_field::GoldilocksField, plonk::config::KeccakGoldilocksConfig,
     util::timing::TimingTree,
 };
-use plonky2_evm::{all_stark::AllStark, config::StarkConfig, prover::prove_with_outputs};
+use plonky2_evm::{
+    all_stark::AllStark, config::StarkConfig, prover::prove_with_outputs, verifier::verify_proof,
+};
 use tokio::{select, time::timeout};
 
 use crate::{
@@ -309,6 +311,17 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     };
 
     let actual_state_trie_hash = proof_run_output.public_values.trie_roots_after.state_root;
+
+    if verify_proof(
+        &AllStark::default(),
+        proof_run_output,
+        &StarkConfig::standard_fast_config(),
+    )
+    .is_err()
+    {
+        return TestStatus::EvmErr("Proof verification failed.".to_string());
+    }
+
     if actual_state_trie_hash != test.common.expected_final_account_state_root_hash {
         if let Some(serialized_revm_variant) = test.revm_variant {
             let instance = serialized_revm_variant.into_hydrated();
