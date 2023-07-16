@@ -37,7 +37,8 @@ pub(crate) struct ProgArgs {
     #[arg(short = 'f', long)]
     pub(crate) test_filter: Option<String>,
 
-    /// Do not run tests that have already passed in the past.
+    /// Do not run tests that have already passed in the past or that are
+    /// ignored.
     #[arg(short = 'p', long)]
     pub(crate) skip_passed: bool,
 
