@@ -91,6 +91,7 @@ impl From<Vec<SerializableRunEntry>> for TestRunEntries {
 #[derive(Copy, Clone, Debug, Deserialize, Default, Serialize)]
 pub(crate) enum PassState {
     Passed,
+    Ignored,
     Failed,
     #[default]
     NotRun,
@@ -100,6 +101,7 @@ impl From<TestStatus> for PassState {
     fn from(v: TestStatus) -> Self {
         match v {
             TestStatus::Passed => PassState::Passed,
+            TestStatus::Ignored => PassState::Ignored,
             TestStatus::EvmErr(_)
             | TestStatus::IncorrectAccountFinalState(_)
             | TestStatus::TimedOut => PassState::Failed,
