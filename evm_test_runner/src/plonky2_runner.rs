@@ -74,6 +74,7 @@ impl TestProgressIndicator for FancyProgressIndicator {
 #[derive(Clone, Debug)]
 pub(crate) enum TestStatus {
     Passed,
+    Ignored,
     EvmErr(String),
     IncorrectAccountFinalState(TrieFinalStateDiff),
     TimedOut,
@@ -83,6 +84,7 @@ impl Display for TestStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TestStatus::Passed => write!(f, "Passed"),
+            TestStatus::Ignored => write!(f, "Ignored"),
             TestStatus::EvmErr(err) => write!(f, "Evm error: {}", err),
             TestStatus::IncorrectAccountFinalState(diff) => {
                 write!(f, "Expected trie hash mismatch: {}", diff)
@@ -294,6 +296,11 @@ fn run_test_or_fail_on_timeout(
 
 /// Run a test against `plonky2` and output a result based on what happens.
 fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
+    if TryInto::<u32>::try_into(test.gen_inputs.block_metadata.block_gaslimit).is_err() {
+        // Gas limit of more than 32 bits is not supported by the zkEVM.
+        return TestStatus::Ignored;
+    }
+
     let timing = TimingTree::new("prove", log::Level::Debug);
 
     let proof_run_res = prove_with_outputs::<GoldilocksField, KeccakGoldilocksConfig, 2>(
