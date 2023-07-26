@@ -296,17 +296,12 @@ fn run_test_or_fail_on_timeout(
 
 /// Run a test against `plonky2` and output a result based on what happens.
 fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
-    if TryInto::<u32>::try_into(test.gen_inputs.block_metadata.block_gaslimit).is_err() {
-        // Gas limit of more than 32 bits is not supported by the zkEVM.
-        return TestStatus::Ignored;
-    }
-
     let timing = TimingTree::new("prove", log::Level::Debug);
 
     let proof_run_res = prove_with_outputs::<GoldilocksField, KeccakGoldilocksConfig, 2>(
         &AllStark::default(),
         &StarkConfig::standard_fast_config(),
-        test.gen_inputs,
+        test.gen_inputs.clone(),
         &mut TimingTree::default(),
     );
 
@@ -314,7 +309,16 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
 
     let (proof_run_output, generation_outputs) = match proof_run_res {
         Ok(v) => v,
-        Err(evm_err) => return TestStatus::EvmErr(evm_err.to_string()),
+        Err(evm_err) => {
+            if evm_err.to_string().contains("GasLimitError")
+                && TryInto::<u32>::try_into(test.gen_inputs.block_metadata.block_gaslimit).is_err()
+            {
+                // Gas limit of more than 32 bits is not supported by the zkEVM.
+                return TestStatus::Ignored;
+            } else {
+                return TestStatus::EvmErr(evm_err.to_string());
+            };
+        }
     };
 
     let actual_state_trie_hash = proof_run_output.public_values.trie_roots_after.state_root;
