@@ -7,11 +7,11 @@ use std::{
 use anyhow::{anyhow, Context};
 use eth_trie_utils::partial_trie::{HashedPartialTrie, Node, PartialTrie};
 use ethereum_types::{Address, H256};
+use plonky2_evm::proof::TrieRoots;
 use plonky2_evm::{
     generation::{GenerationInputs, TrieInputs},
     proof::BlockMetadata,
 };
-use plonky2_evm::proof::TrieRoots;
 use serde::{Deserialize, Serialize};
 
 use crate::revm::SerializableEVMInstance;
