@@ -5,7 +5,9 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
+use eth_trie_utils::partial_trie::{HashedPartialTrie, Node, PartialTrie};
 use ethereum_types::{Address, H256};
+use plonky2_evm::proof::TrieRoots;
 use plonky2_evm::{
     generation::{GenerationInputs, TrieInputs},
     proof::BlockMetadata,
@@ -58,9 +60,15 @@ impl ParsedTestManifest {
                 None => true,
             })
             .map(|(variant_idx, (t_var, revm_variant))| {
+                let trie_roots_after = TrieRoots {
+                    state_root: t_var.common.expected_final_account_state_root_hash,
+                    transactions_root: HashedPartialTrie::from(Node::Empty).hash(), // TODO: Fix this when we have transactions trie.
+                    receipts_root: HashedPartialTrie::from(Node::Empty).hash(), // TODO: Fix this when we have receipts trie.
+                };
                 let gen_inputs = GenerationInputs {
                     signed_txns: vec![t_var.txn_bytes],
                     tries: self.plonky2_variants.const_plonky2_inputs.tries.clone(),
+                    trie_roots_after,
                     contract_code: self
                         .plonky2_variants
                         .const_plonky2_inputs
