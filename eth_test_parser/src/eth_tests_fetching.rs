@@ -19,6 +19,7 @@ pub(crate) fn clone_or_update_remote_tests() {
     flatten_special_folders();
 }
 
+#[allow(clippy::permissions_set_readonly_false)]
 fn flatten_special_folders() {
     let dirs = get_test_group_dirs()
         .unwrap()
