@@ -7,7 +7,7 @@ use std::{
 };
 
 use common::types::TestVariantRunInfo;
-use ethereum_types::H256;
+use ethereum_types::U256;
 use futures::executor::block_on;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::trace;
@@ -16,13 +16,12 @@ use plonky2::{
     util::timing::TimingTree,
 };
 use plonky2_evm::{
-    all_stark::AllStark, config::StarkConfig, prover::prove_with_outputs, verifier::verify_proof,
+    all_stark::AllStark, config::StarkConfig, prover::prove, verifier::verify_proof,
 };
 use tokio::{select, time::timeout};
 
 use crate::{
     persistent_run_state::TestRunEntries,
-    state_diff::StateDiff,
     test_dir_reading::{ParsedTestGroup, ParsedTestSubGroup, Test},
     ProcessAbortedRecv,
 };
@@ -76,7 +75,6 @@ pub(crate) enum TestStatus {
     Passed,
     Ignored,
     EvmErr(String),
-    IncorrectAccountFinalState(TrieFinalStateDiff),
     TimedOut,
 }
 
@@ -86,49 +84,8 @@ impl Display for TestStatus {
             TestStatus::Passed => write!(f, "Passed"),
             TestStatus::Ignored => write!(f, "Ignored"),
             TestStatus::EvmErr(err) => write!(f, "Evm error: {}", err),
-            TestStatus::IncorrectAccountFinalState(diff) => {
-                write!(f, "Expected trie hash mismatch: {}", diff)
-            }
             TestStatus::TimedOut => write!(f, "Test timed out"),
         }
-    }
-}
-
-/// If one or more trie hashes are different from the expected, then we return a
-/// diff showing which tries where different.
-#[derive(Clone, Debug)]
-pub(crate) struct TrieFinalStateDiff {
-    state: TrieComparisonResult,
-    receipt: TrieComparisonResult,
-    transaction: TrieComparisonResult,
-}
-
-/// A result of comparing the actual outputted `plonky2` trie to the one
-/// expected by the test.
-#[derive(Clone, Debug)]
-enum TrieComparisonResult {
-    Correct,
-    Difference(H256, H256),
-}
-
-impl Display for TrieComparisonResult {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Correct => write!(f, "Correct"),
-            Self::Difference(actual, expected) => {
-                write!(f, "Difference (Actual: {}, Expected: {})", actual, expected)
-            }
-        }
-    }
-}
-
-impl Display for TrieFinalStateDiff {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "State: {}, Receipt: {}, Transaction: {}",
-            self.state, self.receipt, self.transaction
-        )
     }
 }
 
@@ -298,30 +255,40 @@ fn run_test_or_fail_on_timeout(
 fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     let timing = TimingTree::new("prove", log::Level::Debug);
 
-    let proof_run_res = prove_with_outputs::<GoldilocksField, KeccakGoldilocksConfig, 2>(
+    // Because many tests use a gas limit that isn't supported by plonky2 zkEVM,
+    // we manually reduce the gas limit for those to `u32::MAX`, and ignore the ones
+    // for which the gas used would be greater.
+    let mut gen_inputs = test.gen_inputs.clone();
+    if TryInto::<u32>::try_into(gen_inputs.block_metadata.block_gas_used).is_err() {
+        // This test cannot be proven by plonky2 zkEVM.
+        return TestStatus::Ignored;
+    }
+
+    if TryInto::<u32>::try_into(test.gen_inputs.block_metadata.block_gaslimit).is_err() {
+        // Set gaslimit to the largest integer supported by plonky2 zkEVM for this.
+        gen_inputs.block_metadata.block_gaslimit = U256::from(u32::MAX);
+    }
+
+    let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
         &AllStark::default(),
         &StarkConfig::standard_fast_config(),
-        test.gen_inputs.clone(),
+        gen_inputs,
         &mut TimingTree::default(),
     );
 
     timing.filter(Duration::from_millis(100)).print();
 
-    let (proof_run_output, generation_outputs) = match proof_run_res {
+    let proof_run_output = match proof_run_res {
         Ok(v) => v,
         Err(evm_err) => {
-            if evm_err.to_string().contains("GasLimitError")
-                && TryInto::<u32>::try_into(test.gen_inputs.block_metadata.block_gaslimit).is_err()
-            {
-                // Gas limit of more than 32 bits is not supported by the zkEVM.
+            if TryInto::<u32>::try_into(test.gen_inputs.block_metadata.block_gaslimit).is_err() {
+                // We manually altered the gaslimit to try running this test, so we ignore it as
+                // failure cannot be 100% attributed to the zkEVM behavior.
                 return TestStatus::Ignored;
-            } else {
-                return TestStatus::EvmErr(evm_err.to_string());
-            };
+            }
+            return TestStatus::EvmErr(evm_err.to_string());
         }
     };
-
-    let actual_state_trie_hash = proof_run_output.public_values.trie_roots_after.state_root;
 
     if verify_proof(
         &AllStark::default(),
@@ -332,32 +299,6 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     {
         return TestStatus::EvmErr("Proof verification failed.".to_string());
     }
-
-    if actual_state_trie_hash != test.common.expected_final_account_state_root_hash {
-        if let Some(serialized_revm_variant) = test.revm_variant {
-            let instance = serialized_revm_variant.into_hydrated();
-            let expected_state = instance.transact_ref().map(|result| result.state);
-            if let Ok(state) = expected_state {
-                let state_diff = StateDiff::new(state, generation_outputs.accounts);
-                // TODO: Make this optional / configurable
-                println!("{}", state_diff);
-            }
-        }
-
-        let trie_diff = TrieFinalStateDiff {
-            state: TrieComparisonResult::Difference(
-                actual_state_trie_hash,
-                test.common.expected_final_account_state_root_hash,
-            ),
-            receipt: TrieComparisonResult::Correct, // TODO...
-            transaction: TrieComparisonResult::Correct, // TODO...
-        };
-
-        return TestStatus::IncorrectAccountFinalState(trie_diff);
-    }
-
-    // TODO: Also check receipt and txn hashes once these are provided by the
-    // parser...
 
     TestStatus::Passed
 }

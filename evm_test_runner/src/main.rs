@@ -22,7 +22,6 @@ mod arg_parsing;
 mod persistent_run_state;
 mod plonky2_runner;
 mod report_generation;
-mod state_diff;
 mod test_dir_reading;
 
 // Oneshot is ideal here, but I can't get it to the abort handler.

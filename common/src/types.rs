@@ -5,9 +5,8 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
-use eth_trie_utils::partial_trie::{HashedPartialTrie, Node, PartialTrie};
-use ethereum_types::{Address, H256};
-use plonky2_evm::proof::TrieRoots;
+use ethereum_types::{Address, H256, U256};
+use plonky2_evm::proof::{BlockHashes, TrieRoots};
 use plonky2_evm::{
     generation::{GenerationInputs, TrieInputs},
     proof::BlockMetadata,
@@ -18,7 +17,7 @@ use crate::revm::SerializableEVMInstance;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ParsedTestManifest {
-    pub plonky2_variants: Plonky2ParsedTest,
+    pub plonky2_variants: Vec<Plonky2ParsedTest>,
     pub revm_variants: Option<Vec<SerializableEVMInstance>>,
 }
 
@@ -40,17 +39,14 @@ impl ParsedTestManifest {
         let revm_variants: Vec<Option<SerializableEVMInstance>> = match self.revm_variants {
             // `revm_variants` will be parallel to `plonky2_variants`, given they are both
             // generated from the same vec (`test.post.merge`).
-            None => (0..self.plonky2_variants.test_variants.len())
-                .map(|_| None)
-                .collect(),
+            None => (0..self.plonky2_variants.len()).map(|_| None).collect(),
             Some(v) => v.into_iter().map(Some).collect(),
         };
 
-        let tot_variants_without_filter = self.plonky2_variants.test_variants.len();
+        let tot_variants_without_filter = self.plonky2_variants.len();
 
         let variants = self
             .plonky2_variants
-            .test_variants
             .into_iter()
             .zip(revm_variants.into_iter())
             .enumerate()
@@ -61,30 +57,29 @@ impl ParsedTestManifest {
             })
             .map(|(variant_idx, (t_var, revm_variant))| {
                 let trie_roots_after = TrieRoots {
-                    state_root: t_var.common.expected_final_account_state_root_hash,
-                    transactions_root: HashedPartialTrie::from(Node::Empty).hash(), // TODO: Fix this when we have transactions trie.
-                    receipts_root: HashedPartialTrie::from(Node::Empty).hash(), // TODO: Fix this when we have receipts trie.
+                    state_root: t_var.final_roots.state_root_hash,
+                    transactions_root: t_var.final_roots.txn_trie_root_hash,
+                    receipts_root: t_var.final_roots.receipts_trie_root_hash,
                 };
                 let gen_inputs = GenerationInputs {
                     signed_txns: vec![t_var.txn_bytes],
-                    tries: self.plonky2_variants.const_plonky2_inputs.tries.clone(),
+                    tries: t_var.plonky2_metadata.tries.clone(),
                     trie_roots_after,
-                    contract_code: self
-                        .plonky2_variants
-                        .const_plonky2_inputs
-                        .contract_code
-                        .clone(),
-                    block_metadata: self
-                        .plonky2_variants
-                        .const_plonky2_inputs
-                        .block_metadata
-                        .clone(),
-                    addresses: self.plonky2_variants.const_plonky2_inputs.addresses.clone(),
+                    genesis_state_trie_root: t_var.plonky2_metadata.genesis_state_root,
+                    contract_code: t_var.plonky2_metadata.contract_code.clone(),
+                    block_metadata: t_var.plonky2_metadata.block_metadata.clone(),
+                    addresses: t_var.plonky2_metadata.addresses.clone(),
+                    txn_number_before: U256::zero(),
+                    gas_used_before: U256::zero(),
+                    block_bloom_before: [U256::zero(); 8],
+                    gas_used_after: t_var.plonky2_metadata.block_metadata.block_gas_used,
+                    block_bloom_after: t_var.plonky2_metadata.block_metadata.block_bloom,
+                    block_hashes: BlockHashes::default(),
                 };
 
                 TestVariantRunInfo {
                     gen_inputs,
-                    common: t_var.common,
+                    final_roots: t_var.final_roots,
                     revm_variant,
                     variant_idx,
                 }
@@ -103,37 +98,35 @@ impl ParsedTestManifest {
 /// Note that for our runner we break any txn "variants" (see `indexes` under https://ethereum-tests.readthedocs.io/en/latest/test_types/gstate_tests.html#post-section) into separate sub-tests when running. This is because we don't want a single sub-test variant to cause the entire test to fail (we just want the variant to fail).
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Plonky2ParsedTest {
-    pub test_variants: Vec<TestVariant>,
-
-    /// State that is constant between tests.
-    pub const_plonky2_inputs: ConstGenerationInputs,
-}
-
-/// A single test that
-#[derive(Debug, Deserialize, Serialize)]
-pub struct TestVariant {
-    /// The txn bytes for each txn in the test.
     pub txn_bytes: Vec<u8>,
-    pub common: TestVariantCommon,
+    pub final_roots: ExpectedFinalRoots,
+
+    /// All the metadata needed to prove the transaction in the `test_variant`.
+    pub plonky2_metadata: TestMetadata,
 }
 
 #[derive(Debug)]
 pub struct TestVariantRunInfo {
     pub gen_inputs: GenerationInputs,
-    pub common: TestVariantCommon,
+    pub final_roots: ExpectedFinalRoots,
     pub revm_variant: Option<SerializableEVMInstance>,
     pub variant_idx: usize,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct TestVariantCommon {
+pub struct ExpectedFinalRoots {
     /// The root hash of the expected final state trie.
-    pub expected_final_account_state_root_hash: H256,
+    pub state_root_hash: H256,
+    /// The root hash of the expected final transactions trie.
+    pub txn_trie_root_hash: H256,
+    /// The root hash of the expected final receipts trie.
+    pub receipts_trie_root_hash: H256,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ConstGenerationInputs {
+pub struct TestMetadata {
     pub tries: TrieInputs,
+    pub genesis_state_root: H256,
     pub contract_code: HashMap<H256, Vec<u8>>,
     pub block_metadata: BlockMetadata,
     pub addresses: Vec<Address>,

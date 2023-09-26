@@ -102,9 +102,7 @@ impl From<TestStatus> for PassState {
         match v {
             TestStatus::Passed => PassState::Passed,
             TestStatus::Ignored => PassState::Ignored,
-            TestStatus::EvmErr(_)
-            | TestStatus::IncorrectAccountFinalState(_)
-            | TestStatus::TimedOut => PassState::Failed,
+            TestStatus::EvmErr(_) | TestStatus::TimedOut => PassState::Failed,
         }
     }
 }

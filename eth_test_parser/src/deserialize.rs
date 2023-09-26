@@ -1,9 +1,11 @@
 #![allow(dead_code)]
-use std::collections::HashMap;
 use std::str::FromStr;
+use std::{collections::HashMap, marker::PhantomData};
 
+use anyhow::Result;
 use ethereum_types::{Address, H160, H256, U256, U512};
 use hex::FromHex;
+use serde::de::MapAccess;
 use serde::{
     de::{Error, Visitor},
     Deserialize, Deserializer,
@@ -17,24 +19,15 @@ use serde_with::{serde_as, DefaultOnNull, NoneAsEmptyString};
 /// 2. The value will be greater than 256 bits.
 ///
 /// This helper takes care of stripping that prefix, if it exists, and
-/// additionally pads the value with a U512 to catch overflow. Note that this
-/// implementation is specific to a Vec<_>; in the event that this syntax is
-/// found to occur more often than this particular instance
-/// (`transaction.value`), this logic should be broken out to be modular.
-///
-/// See [this test](https://github.com/ethereum/tests/blob/develop/GeneralStateTests/stTransactionTest/ValueOverflow.json#L197) for a concrete example.
-fn vec_eth_big_int_u512<'de, D>(deserializer: D) -> Result<Vec<U512>, D::Error>
+/// additionally pads the value with a U512 to catch overflow.
+fn eth_big_int_u512<'de, D>(deserializer: D) -> Result<U512, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let s: Vec<String> = Deserialize::deserialize(deserializer)?;
+    let s: String = Deserialize::deserialize(deserializer)?;
     const BIG_INT_PREFIX: &str = "0x:bigint ";
 
-    s.into_iter()
-        .map(|s| {
-            U512::from_str(s.strip_prefix(BIG_INT_PREFIX).unwrap_or(&s)).map_err(D::Error::custom)
-        })
-        .collect()
+    U512::from_str(s.strip_prefix(BIG_INT_PREFIX).unwrap_or(&s)).map_err(D::Error::custom)
 }
 
 #[derive(Deserialize, Debug)]
@@ -95,39 +88,58 @@ where
         .collect::<Result<Vec<_>, D::Error>>()
 }
 
+fn bloom_array_from_hex<'de, D>(deserializer: D) -> Result<[U256; 8], D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    let mut bloom = [U256::zero(); 8];
+
+    for (b, c) in bloom
+        .iter_mut()
+        .zip(s[2..].chars().collect::<Vec<char>>().chunks(64))
+    {
+        *b = U256::from_str_radix(&c.iter().collect::<String>(), 16).map_err(D::Error::custom)?;
+    }
+
+    Ok(bloom)
+}
+
+#[derive(Deserialize, Clone, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct BlockHeader {
+    #[serde(default)]
+    pub(crate) base_fee_per_gas: Option<U256>,
+    #[serde(deserialize_with = "bloom_array_from_hex")]
+    pub(crate) bloom: [U256; 8],
+    pub(crate) coinbase: H160,
+    pub(crate) difficulty: U256,
+    pub(crate) gas_limit: U256,
+    pub(crate) gas_used: U256,
+    pub(crate) number: U256,
+    pub(crate) mix_hash: H256,
+    pub(crate) receipt_trie: H256,
+    pub(crate) state_root: H256,
+    pub(crate) transactions_trie: H256,
+    pub(crate) timestamp: U256,
+}
+
+#[derive(Deserialize, Clone, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct BlockHeaderOnlyRoot {
+    pub(crate) state_root: H256,
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct Env {
-    pub(crate) current_base_fee: U256,
-    pub(crate) current_coinbase: H160,
-    pub(crate) current_difficulty: U256,
-    pub(crate) current_gas_limit: U256,
-    pub(crate) current_number: U256,
-    pub(crate) current_random: U256,
-    pub(crate) current_timestamp: U256,
-    pub(crate) previous_hash: H256,
+pub(crate) struct Block {
+    pub(crate) block_header: Option<BlockHeader>,
+    pub(crate) rlp: Rlp,
+    pub(crate) transactions: Option<Vec<Transaction>>,
 }
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct PostStateIndexes {
-    pub(crate) data: usize,
-    pub(crate) gas: usize,
-    pub(crate) value: usize,
-}
-
-#[derive(Deserialize, Debug)]
-pub(crate) struct PostState {
-    pub(crate) hash: H256,
-    pub(crate) indexes: PostStateIndexes,
-    pub(crate) logs: H256,
-    pub(crate) txbytes: ByteString,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-pub(crate) struct Post {
-    pub(crate) shanghai: Vec<PostState>,
-}
+pub(crate) struct Rlp(pub(crate) ByteString);
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct PreAccount {
@@ -147,7 +159,7 @@ pub(crate) struct AccessList {
 }
 
 #[serde_as]
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Default)]
 /// This is a wrapper around a `Vec<AccessList>` that is used to deserialize a
 /// `null` into an empty vec.
 pub(crate) struct AccessListsInner(
@@ -160,26 +172,96 @@ pub(crate) struct AccessListsInner(
 pub(crate) struct Transaction {
     #[serde(default)]
     pub(crate) access_lists: Vec<AccessListsInner>,
-    pub(crate) data: Vec<ByteString>,
-    #[serde(deserialize_with = "vec_u64_from_hex")]
-    pub(crate) gas_limit: Vec<u64>,
+    pub(crate) data: ByteString,
+    pub(crate) max_fee_per_gas: Option<U256>,
+    pub(crate) max_priority_fee_per_gas: Option<U256>,
+    #[serde(deserialize_with = "u64_from_hex")]
+    pub(crate) gas_limit: u64,
     pub(crate) gas_price: Option<U256>,
     pub(crate) nonce: U256,
-    pub(crate) secret_key: H256,
     pub(crate) sender: H160,
     #[serde_as(as = "NoneAsEmptyString")]
     pub(crate) to: Option<H160>,
+    pub(crate) r: U256,
+    pub(crate) s: U256,
+    pub(crate) v: U256,
     // Protect against overflow.
-    #[serde(deserialize_with = "vec_eth_big_int_u512")]
-    pub(crate) value: Vec<U512>,
+    #[serde(deserialize_with = "eth_big_int_u512")]
+    pub(crate) value: U512,
 }
 
+#[derive(Debug)]
+pub(crate) struct TestBodyCompact(pub(crate) Vec<TestBody>);
+
+#[serde_as]
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct TestBody {
-    pub(crate) env: Env,
-    pub(crate) post: Post,
-    pub(crate) transaction: Transaction,
+    pub(crate) blocks: Vec<Block>,
+    pub(crate) genesis_block_header: BlockHeaderOnlyRoot,
     pub(crate) pre: HashMap<H160, PreAccount>,
+}
+
+// Wrapper around a regular `HashMap` used to conveniently skip
+// non-Shanghai related tests when deserializing.
+#[derive(Default, Debug)]
+pub(crate) struct TestFile(pub(crate) HashMap<String, TestBody>);
+
+impl<'de> Deserialize<'de> for TestFile {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct TestFileVisitor {
+            marker: PhantomData<fn() -> TestFile>,
+        }
+
+        impl TestFileVisitor {
+            fn new() -> Self {
+                TestFileVisitor {
+                    marker: PhantomData,
+                }
+            }
+        }
+
+        impl<'de> Visitor<'de> for TestFileVisitor {
+            // The type that our Visitor is going to produce.
+            type Value = TestFile;
+
+            // Format a message stating what data this Visitor expects to receive.
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("a very special map")
+            }
+
+            fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
+            where
+                M: MapAccess<'de>,
+            {
+                let mut map = TestFile(HashMap::with_capacity(access.size_hint().unwrap_or(0)));
+
+                // While there are entries remaining in the input, add them
+                // into our map if they contain `Shanghai` in their key name.
+                while let Some(key) = access.next_key::<String>()? {
+                    if key.contains("Shanghai") {
+                        // Remove the needless suffix.
+                        let value = access.next_value::<TestBody>()?;
+                        // Some tests have no transactions in the clear, only the txn RLP.
+                        // TODO: handle those tests through txn RLP decoding + sender recovery from
+                        // signature fields.
+                        if value.blocks[0].transactions.is_some() {
+                            map.0.insert(key, value);
+                        }
+                    } else {
+                        let _ = access.next_value::<TestBody>()?;
+                    }
+                }
+
+                Ok(map)
+            }
+        }
+
+        deserializer.deserialize_map(TestFileVisitor::new())
+    }
 }
 
 #[cfg(test)]

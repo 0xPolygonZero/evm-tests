@@ -20,24 +20,18 @@ mod cache_db;
 mod env;
 
 impl TestBody {
-    pub(crate) fn as_serializable_evm_instances(&self) -> Result<Vec<SerializableEVMInstance>> {
-        let envs = self.as_revm_env()?;
+    pub(crate) fn as_serializable_evm_instance(&self) -> Result<SerializableEVMInstance> {
+        let env = self.as_revm_env()?;
         let db = self.as_revm_cache_db()?;
 
-        Ok(envs
-            .into_iter()
-            .map(|env| SerializableEVMInstance {
-                env,
-                db: db.clone(),
-            })
-            .collect())
+        Ok(SerializableEVMInstance { env, db })
     }
 }
 
-impl TryFrom<TestBody> for Vec<SerializableEVMInstance> {
+impl TryFrom<TestBody> for SerializableEVMInstance {
     type Error = anyhow::Error;
 
     fn try_from(body: TestBody) -> Result<Self> {
-        body.as_serializable_evm_instances()
+        body.as_serializable_evm_instance()
     }
 }

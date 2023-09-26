@@ -16,7 +16,7 @@ use std::{
 
 use anyhow::{anyhow, Context};
 use common::{
-    config::GENERATION_INPUTS_DEFAULT_OUTPUT_DIR,
+    config::{GENERATION_INPUTS_DEFAULT_OUTPUT_DIR, MAIN_TEST_DIR},
     types::{ParsedTestManifest, TestVariantRunInfo, VariantFilterType},
 };
 use log::{info, trace};
@@ -50,6 +50,7 @@ pub(crate) fn get_default_parsed_tests_path() -> anyhow::Result<PathBuf> {
         .map(|ancestor| {
             let mut buf = ancestor.to_path_buf();
             buf.push(GENERATION_INPUTS_DEFAULT_OUTPUT_DIR);
+            buf.push(MAIN_TEST_DIR);
             buf
         })
         .find(|path| path.exists())
