@@ -27,5 +27,3 @@ serde_with = "3.0.0"
 serde_cbor = "0.11.2"
 tokio = { version = "1.28.1", features = ["full"] }
 futures = "0.3.28"
-revm = { version = "3.3.0", features = ["serde"] }
-ruint = { version = "1.8.0", features = ["primitive-types"] }

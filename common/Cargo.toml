@@ -14,5 +14,3 @@ eth_trie_utils = { git = "https://github.com/mir-protocol/eth_trie_utils.git", r
 flexi_logger = { version = "0.25.4", features = ["async"] }
 plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "1ff6d4a2839a0cd16598a5db263568885a47e7c9" }
 serde = {version = "1.0.163", features = ["derive"] }
-revm = { version = "3.3.0", features = ["serde"] }
-ruint = { version = "1.8.0", features = ["primitive-types"] }

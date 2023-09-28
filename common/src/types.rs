@@ -13,12 +13,9 @@ use plonky2_evm::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::revm::SerializableEVMInstance;
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ParsedTestManifest {
     pub plonky2_variants: Vec<Plonky2ParsedTest>,
-    pub revm_variants: Option<Vec<SerializableEVMInstance>>,
 }
 
 pub struct FilteredVariantsOutput {
@@ -31,31 +28,18 @@ impl ParsedTestManifest {
         self,
         v_filter: Option<VariantFilterType>,
     ) -> FilteredVariantsOutput {
-        // If `self.revm_variants` is None, the parser was unable to generate an `revm`
-        // instance for any test variant. This occurs when some shared test data was
-        // unable to be parsed (e.g. the `transaction` section). In this case, we
-        // generate a `None` for each test variant slot so that it can be zipped with
-        // plonky2 variants.
-        let revm_variants: Vec<Option<SerializableEVMInstance>> = match self.revm_variants {
-            // `revm_variants` will be parallel to `plonky2_variants`, given they are both
-            // generated from the same vec (`test.post.merge`).
-            None => (0..self.plonky2_variants.len()).map(|_| None).collect(),
-            Some(v) => v.into_iter().map(Some).collect(),
-        };
-
         let tot_variants_without_filter = self.plonky2_variants.len();
 
         let variants = self
             .plonky2_variants
             .into_iter()
-            .zip(revm_variants.into_iter())
             .enumerate()
             .filter(|(variant_idx, _)| match &v_filter {
                 Some(VariantFilterType::Single(v)) => variant_idx == v,
                 Some(VariantFilterType::Range(r)) => r.contains(variant_idx),
                 None => true,
             })
-            .map(|(variant_idx, (t_var, revm_variant))| {
+            .map(|(variant_idx, t_var)| {
                 let trie_roots_after = TrieRoots {
                     state_root: t_var.final_roots.state_root_hash,
                     transactions_root: t_var.final_roots.txn_trie_root_hash,
@@ -80,7 +64,6 @@ impl ParsedTestManifest {
                 TestVariantRunInfo {
                     gen_inputs,
                     final_roots: t_var.final_roots,
-                    revm_variant,
                     variant_idx,
                 }
             })
@@ -109,7 +92,6 @@ pub struct Plonky2ParsedTest {
 pub struct TestVariantRunInfo {
     pub gen_inputs: GenerationInputs,
     pub final_roots: ExpectedFinalRoots,
-    pub revm_variant: Option<SerializableEVMInstance>,
     pub variant_idx: usize,
 }
 
