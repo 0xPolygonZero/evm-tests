@@ -122,6 +122,11 @@ pub(crate) fn get_deserialized_test_bodies(
 }
 
 fn get_deserialized_test_body(entry: &DirEntry) -> Result<Vec<TestBody>> {
+    if entry.path().to_str().unwrap().contains("ValueOverflow") {
+        return Err(anyhow!(
+            "Test has invalid RLP encoding and hence cannot be processed"
+        ));
+    }
     let buf = BufReader::new(File::open(entry.path())?);
     let test_file: TestFile = serde_json::from_reader(buf)?;
 
