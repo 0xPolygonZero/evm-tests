@@ -7,10 +7,9 @@ use std::{
 };
 
 use common::types::TestVariantRunInfo;
-use ethereum_types::U256;
 use futures::executor::block_on;
 use indicatif::{ProgressBar, ProgressStyle};
-use log::trace;
+use log::{trace, warn};
 use plonky2::{
     field::goldilocks_field::GoldilocksField, plonk::config::KeccakGoldilocksConfig,
     util::timing::TimingTree,
@@ -73,6 +72,7 @@ impl TestProgressIndicator for FancyProgressIndicator {
 #[derive(Clone, Debug)]
 pub(crate) enum TestStatus {
     Passed,
+    #[allow(unused)]
     Ignored,
     EvmErr(String),
     TimedOut,
@@ -255,24 +255,14 @@ fn run_test_or_fail_on_timeout(
 fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     let timing = TimingTree::new("prove", log::Level::Debug);
 
-    // Because many tests use a gas limit that isn't supported by plonky2 zkEVM,
-    // we manually reduce the gas limit for those to `u32::MAX`, and ignore the ones
-    // for which the gas used would be greater.
-    let mut gen_inputs = test.gen_inputs.clone();
-    if TryInto::<u32>::try_into(gen_inputs.block_metadata.block_gas_used).is_err() {
-        // This test cannot be proven by plonky2 zkEVM.
-        return TestStatus::Ignored;
-    }
-
-    if TryInto::<u32>::try_into(test.gen_inputs.block_metadata.block_gaslimit).is_err() {
-        // Set gaslimit to the largest integer supported by plonky2 zkEVM for this.
-        gen_inputs.block_metadata.block_gaslimit = U256::from(u32::MAX);
-    }
-
+    // The fields `block_gaslimit` and `block_gas_used` are currently supported up
+    // to 64 bits by plonky2 zkEVM for testing purposes only against the EVM test
+    // Suite. This will be reverted to have them fit in 32 bits before going into
+    // production.
     let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
         &AllStark::default(),
         &StarkConfig::standard_fast_config(),
-        gen_inputs,
+        test.gen_inputs.clone(),
         &mut TimingTree::default(),
     );
 
@@ -281,11 +271,7 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     let proof_run_output = match proof_run_res {
         Ok(v) => v,
         Err(evm_err) => {
-            if TryInto::<u32>::try_into(test.gen_inputs.block_metadata.block_gaslimit).is_err() {
-                // We manually altered the gaslimit to try running this test, so we ignore it as
-                // failure cannot be 100% attributed to the zkEVM behavior.
-                return TestStatus::Ignored;
-            }
+            warn!("Proving failed with error: {:?}", evm_err);
             return TestStatus::EvmErr(evm_err.to_string());
         }
     };
