@@ -8,7 +8,7 @@ use plonky2_evm::generation::mpt::transaction_testing::{
     AccessListItemRlp, AccessListTransactionRlp, AddressOption, FeeMarketTransactionRlp,
     LegacyTransactionRlp,
 };
-use rlp::{Decodable, DecoderError, Rlp};
+use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use rlp_derive::RlpDecodable;
 use serde::de::MapAccess;
 use serde::{
@@ -280,6 +280,22 @@ impl Transaction {
                 .map(|tx| Transaction::FeeMarket(tx.into_regular())),
             _ => LegacyTransactionRlp::decode(&Rlp::new(bytes)).map(Transaction::Legacy),
         }
+    }
+}
+
+impl Encodable for Transaction {
+    fn rlp_append(&self, s: &mut RlpStream) {
+        match self {
+            Transaction::Legacy(tx) => s.append(tx),
+            Transaction::AccessList(tx) => {
+                s.encoder().encode_value(&[0x01]);
+                s.append(tx)
+            }
+            Transaction::FeeMarket(tx) => {
+                s.encoder().encode_value(&[0x02]);
+                s.append(tx)
+            }
+        };
     }
 }
 

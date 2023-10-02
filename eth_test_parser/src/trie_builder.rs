@@ -22,7 +22,7 @@ use plonky2_evm::{generation::TrieInputs, proof::BlockMetadata};
 use rlp::Encodable;
 use rlp_derive::{RlpDecodable, RlpEncodable};
 
-use crate::deserialize::{Block, TestBody, Transaction};
+use crate::deserialize::{Block, TestBody};
 
 #[derive(RlpDecodable, RlpEncodable)]
 pub(crate) struct AccountRlp {
@@ -143,11 +143,7 @@ impl TestBody {
 
     pub(crate) fn get_txn_bytes(&self) -> Vec<u8> {
         let transaction = &self.get_tx();
-        match transaction {
-            Transaction::Legacy(transaction) => rlp::encode(transaction).to_vec(),
-            Transaction::AccessList(transaction) => rlp::encode(transaction).to_vec(),
-            Transaction::FeeMarket(transaction) => rlp::encode(transaction).to_vec(),
-        }
+        rlp::encode(transaction).to_vec()
     }
 }
 
