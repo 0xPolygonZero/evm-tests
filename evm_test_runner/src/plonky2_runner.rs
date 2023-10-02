@@ -262,7 +262,7 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
         &AllStark::default(),
         &StarkConfig::standard_fast_config(),
-        test.gen_inputs.clone(),
+        test.gen_inputs,
         &mut TimingTree::default(),
     );
 

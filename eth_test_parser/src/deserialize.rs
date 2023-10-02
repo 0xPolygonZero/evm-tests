@@ -121,11 +121,11 @@ impl Decodable for AccessListInner {
         if rlp.is_list() {
             let bytes = rlp.at(0)?;
             let access_list: Vec<AccessListItemRlp> = bytes.as_list()?;
-            return Ok(AccessListInner::List(access_list));
+            Ok(AccessListInner::List(access_list))
         } else {
             let bytes = rlp.at(0)?;
             let access_list = bytes.as_val::<AccessListItemRlp>()?;
-            return Ok(AccessListInner::Item(access_list));
+            Ok(AccessListInner::Item(access_list))
         }
     }
 }
@@ -194,7 +194,7 @@ pub struct CustomAccessListTransactionRlp {
 }
 
 impl CustomAccessListTransactionRlp {
-    fn into_regular(&self) -> AccessListTransactionRlp {
+    fn into_regular(self) -> AccessListTransactionRlp {
         AccessListTransactionRlp {
             chain_id: self.chain_id,
             nonce: self.nonce,
@@ -209,7 +209,7 @@ impl CustomAccessListTransactionRlp {
                 .into_iter()
                 .flat_map(|x| match x {
                     AccessListInner::List(list) => list,
-                    AccessListInner::Item(item) => vec![item.clone()],
+                    AccessListInner::Item(item) => vec![item],
                 })
                 .collect(),
             y_parity: self.y_parity,
@@ -237,7 +237,7 @@ pub struct CustomFeeMarketTransactionRlp {
 }
 
 impl CustomFeeMarketTransactionRlp {
-    fn into_regular(&self) -> FeeMarketTransactionRlp {
+    fn into_regular(self) -> FeeMarketTransactionRlp {
         FeeMarketTransactionRlp {
             chain_id: self.chain_id,
             nonce: self.nonce,
@@ -253,7 +253,7 @@ impl CustomFeeMarketTransactionRlp {
                 .into_iter()
                 .flat_map(|x| match x {
                     AccessListInner::List(list) => list,
-                    AccessListInner::Item(item) => vec![item.clone()],
+                    AccessListInner::Item(item) => vec![item],
                 })
                 .collect(),
             y_parity: self.y_parity,
