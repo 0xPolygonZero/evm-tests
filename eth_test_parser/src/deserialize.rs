@@ -175,7 +175,7 @@ impl Decodable for Transactions {
 
         let encoded_txn = rlp.at(0)?.as_val::<Vec<u8>>()?;
         let tx = Transaction::decode(&Rlp::new(&encoded_txn))?;
-        return Ok(Transactions::Item(tx));
+        Ok(Transactions::Item(tx))
     }
 }
 
