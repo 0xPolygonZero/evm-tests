@@ -2,7 +2,7 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use anyhow::Result;
 use bytes::Bytes;
-use ethereum_types::{H160, H256, U256};
+use ethereum_types::{Address, H160, H256, U256};
 use hex::FromHex;
 use plonky2_evm::generation::mpt::transaction_testing::{
     AccessListItemRlp, AccessListTransactionRlp, AddressOption, FeeMarketTransactionRlp,
@@ -106,26 +106,34 @@ pub(crate) struct BlockHeader {
 }
 
 // Some tests store the access list in a way that doesn't respect the specs,
-// (i.e. a list of a list) and hence they require a specific handling.
-#[derive(Clone, Debug)]
-pub enum AccessListInner {
-    List(Vec<AccessListItemRlp>),
-    Item(AccessListItemRlp),
+// and hence they require a specific handling.
+#[derive(Clone, Debug, RlpDecodable)]
+pub struct AccessItemRlp {
+    pub address: Address,
+    pub storage_keys: Vec<StorageKey>,
 }
 
-impl Decodable for AccessListInner {
+#[derive(Clone, Debug)]
+pub struct StorageKey(pub U256);
+
+impl Decodable for StorageKey {
     fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
-        if rlp.is_empty() {
-            return Ok(Self::List(vec![]));
+        // Decode the key as a `Vec<u8>` to deal with badly encoded scalars,
+        // and then convert back to U256.
+        let key = rlp.as_val::<Vec<u8>>()?;
+        if key.len() == 1 && key[0] == 0x80 {
+            return Ok(StorageKey(U256::zero()));
         }
-        if rlp.is_list() {
-            let bytes = rlp.at(0)?;
-            let access_list: Vec<AccessListItemRlp> = bytes.as_list()?;
-            Ok(AccessListInner::List(access_list))
-        } else {
-            let bytes = rlp.at(0)?;
-            let access_list = bytes.as_val::<AccessListItemRlp>()?;
-            Ok(AccessListInner::Item(access_list))
+
+        Ok(StorageKey(U256::from_big_endian(&key)))
+    }
+}
+
+impl AccessItemRlp {
+    fn into_regular(self) -> AccessListItemRlp {
+        AccessListItemRlp {
+            address: self.address,
+            storage_keys: self.storage_keys.iter().map(|k| k.0).collect(),
         }
     }
 }
@@ -152,28 +160,22 @@ impl Transactions {
 
 impl Decodable for Transactions {
     fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
-        let bytes = rlp.at(0)?;
-
-        let attempt_txn = bytes.as_val::<Transaction>();
+        let attempt_txn = rlp.as_val::<Transaction>();
         if let Ok(txn) = attempt_txn {
             return Ok(Transactions::Item(txn));
         }
 
-        let attempt_list: Result<Vec<Transaction>, DecoderError> = bytes.as_list();
+        let attempt_list: Result<Vec<Transaction>, DecoderError> = rlp.as_list();
 
         if let Ok(list) = attempt_list {
             if !list.is_empty() {
                 return Ok(Transactions::List(list));
-            } else {
-                let encoded_txn = bytes.as_val::<Vec<u8>>()?;
-
-                return Ok(Transactions::Item(Transaction::decode(&Rlp::new(
-                    &encoded_txn,
-                ))?));
             }
         }
 
-        Err(DecoderError::Custom("Invalid txn encoding?"))
+        let encoded_txn = rlp.at(0)?.as_val::<Vec<u8>>()?;
+        let tx = Transaction::decode(&Rlp::new(&encoded_txn))?;
+        return Ok(Transactions::Item(tx));
     }
 }
 
@@ -187,7 +189,7 @@ pub struct CustomAccessListTransactionRlp {
     pub to: AddressOption,
     pub value: U256,
     pub data: Bytes,
-    pub access_list: Vec<AccessListInner>,
+    pub access_list: Vec<AccessItemRlp>,
     pub y_parity: U256,
     pub r: U256,
     pub s: U256,
@@ -207,10 +209,7 @@ impl CustomAccessListTransactionRlp {
                 .access_list
                 .clone()
                 .into_iter()
-                .flat_map(|x| match x {
-                    AccessListInner::List(list) => list,
-                    AccessListInner::Item(item) => vec![item],
-                })
+                .map(|x| x.into_regular())
                 .collect(),
             y_parity: self.y_parity,
             r: self.r,
@@ -230,7 +229,7 @@ pub struct CustomFeeMarketTransactionRlp {
     pub to: AddressOption,
     pub value: U256,
     pub data: Bytes,
-    pub access_list: Vec<AccessListInner>,
+    pub access_list: Vec<AccessItemRlp>,
     pub y_parity: U256,
     pub r: U256,
     pub s: U256,
@@ -251,10 +250,7 @@ impl CustomFeeMarketTransactionRlp {
                 .access_list
                 .clone()
                 .into_iter()
-                .flat_map(|x| match x {
-                    AccessListInner::List(list) => list,
-                    AccessListInner::Item(item) => vec![item],
-                })
+                .map(|x| x.into_regular())
                 .collect(),
             y_parity: self.y_parity,
             r: self.r,
