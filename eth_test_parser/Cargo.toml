@@ -10,7 +10,7 @@ edition = "2021"
 [dependencies]
 common = { path = "../common" }
 eth_trie_utils = { git = "https://github.com/mir-protocol/eth_trie_utils.git", rev = "e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5" }
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "cd36e96cb844f3042aa7acf9c03ea8e66735c904" }
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "51eb7c0b5221e6fce5a39beac6a9ba274b2d71b3" }
 
 anyhow = { version = "1.0.71", features = ["backtrace"] }
 bytes = "1.4.0"
