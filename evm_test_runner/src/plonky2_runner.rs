@@ -276,13 +276,13 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
         }
     };
 
-    if verify_proof(
+    let verif_output = verify_proof(
         &AllStark::default(),
         proof_run_output,
         &StarkConfig::standard_fast_config(),
-    )
-    .is_err()
-    {
+    );
+    if verif_output.is_err() {
+        warn!("Verification failed with error: {:?}", verif_output);
         return TestStatus::EvmErr("Proof verification failed.".to_string());
     }
 
