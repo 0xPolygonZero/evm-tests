@@ -341,10 +341,21 @@ pub(crate) struct GenesisBlock {
     pub(crate) _withdrawals: Vec<Withdrawal>,
 }
 
+/// Contains the RLP encoding of the block, as well as the `transactionSequence`
+/// field (if any) to indicate if this test contains a malformed transaction
+/// that *should* be ignored for testing (as all input txns to plonky2 zkEVM are
+/// expected to be valid).
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct BlockRlp {
+pub(crate) struct BlockRlpWithExceptions {
     pub(crate) rlp: ByteString,
+    pub(crate) transaction_sequence: Option<Vec<TransactionSequence>>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TransactionSequence {
+    pub(crate) valid: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -387,7 +398,7 @@ impl TestBody {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct ValueJson {
-    pub(crate) blocks: Vec<BlockRlp>,
+    pub(crate) blocks: Vec<BlockRlpWithExceptions>,
     #[serde(rename = "genesisRLP")]
     pub(crate) genesis_rlp: Option<ByteString>,
     pub(crate) pre: HashMap<H160, PreAccount>,
@@ -432,8 +443,15 @@ impl<'de> Deserialize<'de> for TestFile {
                 // `Shanghai` in their key name.
                 while let Some((key, value)) = access.next_entry::<String, ValueJson>()? {
                     if key.contains("Shanghai") {
-                        let value = TestBody::from_parsed_json(&value);
-                        map.0.insert(key, value);
+                        if value.blocks[0].transaction_sequence.is_none() {
+                            let value = TestBody::from_parsed_json(&value);
+                            map.0.insert(key, value);
+                        } else {
+                            // Some tests deal with malformed transactions that wouldn't be passed
+                            // to plonky2 zkEVM in the first place, so we just ignore them.
+                            let exception = value.blocks[0].transaction_sequence.as_ref().unwrap();
+                            assert_eq!(exception[0].valid, "false".to_string());
+                        }
                     }
                 }
 
