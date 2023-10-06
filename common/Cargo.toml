@@ -12,5 +12,5 @@ anyhow = { version = "1.0.71", features = ["backtrace"] }
 ethereum-types = "0.14.1"
 eth_trie_utils = { git = "https://github.com/mir-protocol/eth_trie_utils.git", rev = "e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5" }
 flexi_logger = { version = "0.25.4", features = ["async"] }
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "51eb7c0b5221e6fce5a39beac6a9ba274b2d71b3" }
+plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "0de6f949622a6410835bb776c40cc3cad04316a9" }
 serde = {version = "1.0.163", features = ["derive"] }
