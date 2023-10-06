@@ -62,6 +62,7 @@ impl ParsedTestManifest {
                 };
 
                 TestVariantRunInfo {
+                    variant_name: t_var.test_name,
                     gen_inputs,
                     final_roots: t_var.final_roots,
                     variant_idx,
@@ -81,6 +82,8 @@ impl ParsedTestManifest {
 /// Note that for our runner we break any txn "variants" (see `indexes` under https://ethereum-tests.readthedocs.io/en/latest/test_types/gstate_tests.html#post-section) into separate sub-tests when running. This is because we don't want a single sub-test variant to cause the entire test to fail (we just want the variant to fail).
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Plonky2ParsedTest {
+    pub test_name: String,
+
     pub txn_bytes: Vec<u8>,
     pub final_roots: ExpectedFinalRoots,
 
@@ -90,6 +93,8 @@ pub struct Plonky2ParsedTest {
 
 #[derive(Debug)]
 pub struct TestVariantRunInfo {
+    pub variant_name: String,
+
     pub gen_inputs: GenerationInputs,
     pub final_roots: ExpectedFinalRoots,
     pub variant_idx: usize,

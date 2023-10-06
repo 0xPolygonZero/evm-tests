@@ -89,6 +89,7 @@ impl TestBody {
         };
 
         Plonky2ParsedTest {
+            test_name: self.name.clone(),
             txn_bytes: self.get_txn_bytes(),
             final_roots: ExpectedFinalRoots {
                 state_root_hash: header.state_root,

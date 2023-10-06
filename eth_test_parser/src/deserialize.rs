@@ -369,6 +369,7 @@ pub(crate) struct PreAccount {
 
 #[derive(Debug)]
 pub(crate) struct TestBody {
+    pub(crate) name: String,
     pub(crate) block: Block,
     // The genesis block has an empty transactions list, which needs a
     // different handling than the logic present in `Block` decoding.
@@ -377,12 +378,13 @@ pub(crate) struct TestBody {
 }
 
 impl TestBody {
-    fn from_parsed_json(value: &ValueJson) -> Self {
+    fn from_parsed_json(value: &ValueJson, variant_name: String) -> Self {
         let block: Block = rlp::decode(&value.blocks[0].rlp.0).unwrap();
         let genesis_block: GenesisBlock =
             rlp::decode(&value.genesis_rlp.as_ref().unwrap().0).unwrap();
 
         Self {
+            name: variant_name,
             block,
             genesis_block,
             pre: value.pre.clone(),
@@ -444,7 +446,7 @@ impl<'de> Deserialize<'de> for TestFile {
                 while let Some((key, value)) = access.next_entry::<String, ValueJson>()? {
                     if key.contains("Shanghai") {
                         if value.blocks[0].transaction_sequence.is_none() {
-                            let value = TestBody::from_parsed_json(&value);
+                            let value = TestBody::from_parsed_json(&value, key.clone());
                             map.0.insert(key, value);
                         } else {
                             // Some tests deal with malformed transactions that wouldn't be passed
