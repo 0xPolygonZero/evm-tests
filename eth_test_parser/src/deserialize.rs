@@ -139,43 +139,23 @@ impl AccessItemRlp {
 }
 
 // Some tests represent the `transactions` field of their block in the RLP
-// string in a way that doesn't respect the specs, (i.e. a single txn not in a
-// list) and hence they require a specific handling.
-// Additionally, some represent them as a list of encoded txn, which require a
-// second layer of RLP decoding.
+// string in a way that doesn't respect the specs, and hence they require a
+// specific handling. The different cases are:
+// - a regular list of items (i.e. transactions)
+// - a single item (i.e. transaction) but not a list
+// - a list of strings (i.e. encodings of transactions)
 #[derive(Debug)]
-pub(crate) enum Transactions {
-    List(Vec<Transaction>),
-    Item(Transaction),
-}
-
-impl Transactions {
-    pub(crate) fn get_tx(&self) -> Transaction {
-        match self {
-            Transactions::List(list) => list[0].clone(),
-            Transactions::Item(tx) => tx.clone(),
-        }
-    }
-}
+pub(crate) struct Transactions(pub(crate) Transaction);
 
 impl Decodable for Transactions {
     fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
-        let attempt_txn = rlp.as_val::<Transaction>();
-        if let Ok(txn) = attempt_txn {
-            return Ok(Transactions::Item(txn));
+        if rlp.is_list() {
+            let txn = rlp.at(0)?.as_val::<Transaction>()?;
+            Ok(Transactions(txn))
+        } else {
+            let txn = rlp.as_val::<Transaction>()?;
+            Ok(Transactions(txn))
         }
-
-        let attempt_list: Result<Vec<Transaction>, DecoderError> = rlp.as_list();
-
-        if let Ok(list) = attempt_list {
-            if !list.is_empty() {
-                return Ok(Transactions::List(list));
-            }
-        }
-
-        let encoded_txn = rlp.at(0)?.as_val::<Vec<u8>>()?;
-        let tx = Transaction::decode(&Rlp::new(&encoded_txn))?;
-        Ok(Transactions::Item(tx))
     }
 }
 
@@ -309,7 +289,8 @@ impl Decodable for Transaction {
         // Somes tests have a different format and store the RLP encoding of the
         // transaction, which needs an additional layer of decoding.
         if attempt.is_err() && rlp.as_raw().len() >= 2 {
-            return Transaction::decode_actual_rlp(&rlp.as_raw()[2..]);
+            let encoded_txn = rlp.as_val::<Vec<u8>>()?;
+            return Transaction::decode_actual_rlp(&encoded_txn);
         }
 
         attempt
@@ -392,7 +373,7 @@ impl TestBody {
     }
 
     pub(crate) fn get_tx(&self) -> Transaction {
-        self.block.transactions.get_tx()
+        self.block.transactions.0.clone()
     }
 }
 
@@ -446,8 +427,22 @@ impl<'de> Deserialize<'de> for TestFile {
                 while let Some((key, value)) = access.next_entry::<String, ValueJson>()? {
                     if key.contains("Shanghai") {
                         if value.blocks[0].transaction_sequence.is_none() {
-                            let value = TestBody::from_parsed_json(&value, key.clone());
-                            map.0.insert(key, value);
+                            let test_body = TestBody::from_parsed_json(&value, key.clone());
+
+                            // Sanity check: some tests *do not* abide by standard RLP encoding
+                            // rules, therefore causing discrepancies between the "expected"
+                            // encoding of the transaction that is part of the block RLP and used to
+                            // form the transactions trie, and the *regular* encoding computed here
+                            // after deserialization and to be fed to plonky2 zkEVM.
+                            {
+                                let rlp = &value.blocks[0].rlp.0;
+                                let encoded_txn = rlp::encode(&test_body.get_tx()).to_vec();
+                                // Ensure that the encoding we will provide the zkEVM prover is in
+                                // the block RLP.
+                                if rlp.windows(encoded_txn.len()).any(|c| c == encoded_txn) {
+                                    map.0.insert(key, test_body);
+                                }
+                            }
                         } else {
                             // Some tests deal with malformed transactions that wouldn't be passed
                             // to plonky2 zkEVM in the first place, so we just ignore them.
