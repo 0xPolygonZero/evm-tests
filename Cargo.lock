@@ -656,7 +656,7 @@ dependencies = [
 [[package]]
 name = "eth_trie_utils"
 version = "0.6.0"
-source = "git+https://github.com/mir-protocol/eth_trie_utils.git?rev=e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5#e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5"
+source = "git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5#e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5"
 dependencies = [
  "bytes",
  "enum-as-inner",
@@ -1527,7 +1527,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 [[package]]
 name = "plonky2"
 version = "0.1.4"
-source = "git+https://github.com/mir-protocol/plonky2.git?rev=1d60431992ab3cc90addfa12b43f851e35ad97cb#1d60431992ab3cc90addfa12b43f851e35ad97cb"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=49976ea2a98dcb6052bd6cf3a65f730e55727330#49976ea2a98dcb6052bd6cf3a65f730e55727330"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1551,7 +1551,7 @@ dependencies = [
 [[package]]
 name = "plonky2_evm"
 version = "0.1.1"
-source = "git+https://github.com/mir-protocol/plonky2.git?rev=1d60431992ab3cc90addfa12b43f851e35ad97cb#1d60431992ab3cc90addfa12b43f851e35ad97cb"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=49976ea2a98dcb6052bd6cf3a65f730e55727330#49976ea2a98dcb6052bd6cf3a65f730e55727330"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1585,7 +1585,7 @@ dependencies = [
 [[package]]
 name = "plonky2_field"
 version = "0.1.1"
-source = "git+https://github.com/mir-protocol/plonky2.git?rev=1d60431992ab3cc90addfa12b43f851e35ad97cb#1d60431992ab3cc90addfa12b43f851e35ad97cb"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=49976ea2a98dcb6052bd6cf3a65f730e55727330#49976ea2a98dcb6052bd6cf3a65f730e55727330"
 dependencies = [
  "anyhow",
  "itertools",
@@ -1600,7 +1600,7 @@ dependencies = [
 [[package]]
 name = "plonky2_maybe_rayon"
 version = "0.1.1"
-source = "git+https://github.com/mir-protocol/plonky2.git?rev=1d60431992ab3cc90addfa12b43f851e35ad97cb#1d60431992ab3cc90addfa12b43f851e35ad97cb"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=49976ea2a98dcb6052bd6cf3a65f730e55727330#49976ea2a98dcb6052bd6cf3a65f730e55727330"
 dependencies = [
  "rayon",
 ]
@@ -1608,7 +1608,7 @@ dependencies = [
 [[package]]
 name = "plonky2_util"
 version = "0.1.1"
-source = "git+https://github.com/mir-protocol/plonky2.git?rev=1d60431992ab3cc90addfa12b43f851e35ad97cb#1d60431992ab3cc90addfa12b43f851e35ad97cb"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=49976ea2a98dcb6052bd6cf3a65f730e55727330#49976ea2a98dcb6052bd6cf3a65f730e55727330"
 
 [[package]]
 name = "portable-atomic"
