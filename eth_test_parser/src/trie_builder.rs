@@ -86,6 +86,11 @@ impl TestBody {
             genesis_state_root: self.genesis_block.block_header.state_root,
             block_metadata: self.block.block_metadata(),
             addresses,
+            withdrawals: block
+                .withdrawals
+                .iter()
+                .map(|w| (w.address, w.amount))
+                .collect(),
         };
 
         Plonky2ParsedTest {

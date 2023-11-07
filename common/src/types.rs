@@ -58,6 +58,7 @@ impl ParsedTestManifest {
                     block_bloom_before: [U256::zero(); 8],
                     gas_used_after: t_var.plonky2_metadata.block_metadata.block_gas_used,
                     block_bloom_after: t_var.plonky2_metadata.block_metadata.block_bloom,
+                    withdrawals: t_var.plonky2_metadata.withdrawals,
                     block_hashes: BlockHashes::default(),
                 };
 
@@ -117,6 +118,7 @@ pub struct TestMetadata {
     pub contract_code: HashMap<H256, Vec<u8>>,
     pub block_metadata: BlockMetadata,
     pub addresses: Vec<Address>,
+    pub withdrawals: Vec<(Address, U256)>,
 }
 
 #[derive(Clone, Debug)]

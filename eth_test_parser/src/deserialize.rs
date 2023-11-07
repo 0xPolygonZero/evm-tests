@@ -302,8 +302,8 @@ impl Decodable for Transaction {
 pub(crate) struct Withdrawal {
     pub(crate) _index: U256,
     pub(crate) _validator_index: U256,
-    pub(crate) _address: H160,
-    pub(crate) _amount: U256,
+    pub(crate) address: H160,
+    pub(crate) amount: U256,
 }
 
 #[derive(Debug, RlpDecodable)]
@@ -311,7 +311,7 @@ pub(crate) struct Block {
     pub(crate) block_header: BlockHeader,
     pub(crate) transactions: Transactions,
     pub(crate) _uncle_headers: Vec<BlockHeader>,
-    pub(crate) _withdrawals: Vec<Withdrawal>,
+    pub(crate) withdrawals: Vec<Withdrawal>,
 }
 
 #[derive(Debug, RlpDecodable)]
