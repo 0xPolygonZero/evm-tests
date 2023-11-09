@@ -46,7 +46,7 @@ impl ParsedTestManifest {
                     receipts_root: t_var.final_roots.receipts_trie_root_hash,
                 };
                 let gen_inputs = GenerationInputs {
-                    signed_txns: vec![t_var.txn_bytes],
+                    signed_txn: Some(t_var.txn_bytes),
                     tries: t_var.plonky2_metadata.tries.clone(),
                     trie_roots_after,
                     genesis_state_trie_root: t_var.plonky2_metadata.genesis_state_root,
