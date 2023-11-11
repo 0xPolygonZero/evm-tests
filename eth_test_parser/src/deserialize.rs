@@ -356,6 +356,7 @@ pub(crate) struct TestBody {
     // different handling than the logic present in `Block` decoding.
     pub(crate) genesis_block: GenesisBlock,
     pub(crate) pre: HashMap<H160, PreAccount>,
+    pub(crate) post: HashMap<H160, PreAccount>,
 }
 
 impl TestBody {
@@ -369,6 +370,7 @@ impl TestBody {
             block,
             genesis_block,
             pre: value.pre.clone(),
+            post: value.post_state.clone(),
         }
     }
 
@@ -385,6 +387,7 @@ struct ValueJson {
     #[serde(rename = "genesisRLP")]
     pub(crate) genesis_rlp: Option<ByteString>,
     pub(crate) pre: HashMap<H160, PreAccount>,
+    pub(crate) post_state: HashMap<H160, PreAccount>,
 }
 
 // Wrapper around a regular `HashMap` used to conveniently skip
