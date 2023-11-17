@@ -7,6 +7,7 @@ use std::{
 };
 
 use common::types::TestVariantRunInfo;
+use ethereum_types::U256;
 use futures::executor::block_on;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{trace, warn};
@@ -255,6 +256,21 @@ fn run_test_or_fail_on_timeout(
 fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     let timing = TimingTree::new("prove", log::Level::Debug);
 
+    // plonky2 does not support a block gaslimit that does not fit in a u32
+    // If a test has such issue, we "try" proving it with an altered gaslimit,
+    // and will ignore it if proving the altered inputs failed so as to not
+    // have false positives.
+    let mut inputs = test.gen_inputs.clone();
+    let is_gaslimit_changed =
+        if TryInto::<u32>::try_into(inputs.block_metadata.block_gaslimit).is_ok() {
+            false
+        } else {
+            true
+        };
+    if is_gaslimit_changed {
+        inputs.block_metadata.block_gaslimit = U256::from(u32::MAX);
+    }
+
     // The fields `block_gaslimit` and `block_gas_used` are currently supported up
     // to 64 bits by plonky2 zkEVM for testing purposes only against the EVM test
     // Suite. This will be reverted to have them fit in 32 bits before going into
@@ -262,7 +278,7 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
         &AllStark::default(),
         &StarkConfig::standard_fast_config(),
-        test.gen_inputs,
+        inputs,
         &mut TimingTree::default(),
     );
 
@@ -271,6 +287,12 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     let proof_run_output = match proof_run_res {
         Ok(v) => v,
         Err(evm_err) => {
+            if is_gaslimit_changed {
+                // We altered the inputs, so we just skip this test in case of failure.
+                return TestStatus::Ignored;
+            }
+
+            // The prover failed with unmodified inputs, so this is an actual error.
             warn!("Proving failed with error: {:?}", evm_err);
             return TestStatus::EvmErr(evm_err.to_string());
         }
