@@ -260,13 +260,10 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
     // If a test has such issue, we "try" proving it with an altered gaslimit,
     // and will ignore it if proving the altered inputs failed so as to not
     // have false positives.
-    let mut inputs = test.gen_inputs.clone();
+    let mut inputs = test.gen_inputs;
     let is_gaslimit_changed =
-        if TryInto::<u32>::try_into(inputs.block_metadata.block_gaslimit).is_ok() {
-            false
-        } else {
-            true
-        };
+        TryInto::<u32>::try_into(inputs.block_metadata.block_gaslimit).is_err();
+
     if is_gaslimit_changed {
         inputs.block_metadata.block_gaslimit = U256::from(u32::MAX);
     }
