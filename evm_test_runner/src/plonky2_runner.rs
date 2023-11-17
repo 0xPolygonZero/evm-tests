@@ -271,10 +271,6 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
         inputs.block_metadata.block_gaslimit = U256::from(u32::MAX);
     }
 
-    // The fields `block_gaslimit` and `block_gas_used` are currently supported up
-    // to 64 bits by plonky2 zkEVM for testing purposes only against the EVM test
-    // Suite. This will be reverted to have them fit in 32 bits before going into
-    // production.
     let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
         &AllStark::default(),
         &StarkConfig::standard_fast_config(),
