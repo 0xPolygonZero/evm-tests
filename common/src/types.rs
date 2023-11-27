@@ -46,7 +46,7 @@ impl ParsedTestManifest {
                     receipts_root: t_var.final_roots.receipts_trie_root_hash,
                 };
                 let gen_inputs = GenerationInputs {
-                    signed_txns: vec![t_var.txn_bytes],
+                    signed_txn: Some(t_var.txn_bytes),
                     tries: t_var.plonky2_metadata.tries.clone(),
                     trie_roots_after,
                     genesis_state_trie_root: t_var.plonky2_metadata.genesis_state_root,
@@ -58,10 +58,12 @@ impl ParsedTestManifest {
                     block_bloom_before: [U256::zero(); 8],
                     gas_used_after: t_var.plonky2_metadata.block_metadata.block_gas_used,
                     block_bloom_after: t_var.plonky2_metadata.block_metadata.block_bloom,
+                    withdrawals: t_var.plonky2_metadata.withdrawals,
                     block_hashes: BlockHashes::default(),
                 };
 
                 TestVariantRunInfo {
+                    variant_name: t_var.test_name,
                     gen_inputs,
                     final_roots: t_var.final_roots,
                     variant_idx,
@@ -81,6 +83,8 @@ impl ParsedTestManifest {
 /// Note that for our runner we break any txn "variants" (see `indexes` under https://ethereum-tests.readthedocs.io/en/latest/test_types/gstate_tests.html#post-section) into separate sub-tests when running. This is because we don't want a single sub-test variant to cause the entire test to fail (we just want the variant to fail).
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Plonky2ParsedTest {
+    pub test_name: String,
+
     pub txn_bytes: Vec<u8>,
     pub final_roots: ExpectedFinalRoots,
 
@@ -90,6 +94,8 @@ pub struct Plonky2ParsedTest {
 
 #[derive(Debug)]
 pub struct TestVariantRunInfo {
+    pub variant_name: String,
+
     pub gen_inputs: GenerationInputs,
     pub final_roots: ExpectedFinalRoots,
     pub variant_idx: usize,
@@ -112,6 +118,7 @@ pub struct TestMetadata {
     pub contract_code: HashMap<H256, Vec<u8>>,
     pub block_metadata: BlockMetadata,
     pub addresses: Vec<Address>,
+    pub withdrawals: Vec<(Address, U256)>,
 }
 
 #[derive(Clone, Debug)]

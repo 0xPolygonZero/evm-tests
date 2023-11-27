@@ -130,5 +130,10 @@ fn get_deserialized_test_body(entry: &DirEntry) -> Result<Vec<TestBody>> {
     let buf = BufReader::new(File::open(entry.path())?);
     let test_file: TestFile = serde_json::from_reader(buf)?;
 
-    anyhow::Ok(test_file.0.into_values().collect())
+    let tests: Vec<TestBody> = test_file.0.into_values().collect();
+    if tests.is_empty() {
+        Err(anyhow!("No valid tests found"))
+    } else {
+        anyhow::Ok(tests)
+    }
 }

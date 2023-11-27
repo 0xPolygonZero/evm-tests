@@ -139,43 +139,23 @@ impl AccessItemRlp {
 }
 
 // Some tests represent the `transactions` field of their block in the RLP
-// string in a way that doesn't respect the specs, (i.e. a single txn not in a
-// list) and hence they require a specific handling.
-// Additionally, some represent them as a list of encoded txn, which require a
-// second layer of RLP decoding.
+// string in a way that doesn't respect the specs, and hence they require a
+// specific handling. The different cases are:
+// - a regular list of items (i.e. transactions)
+// - a single item (i.e. transaction) but not a list
+// - a list of strings (i.e. encodings of transactions)
 #[derive(Debug)]
-pub(crate) enum Transactions {
-    List(Vec<Transaction>),
-    Item(Transaction),
-}
-
-impl Transactions {
-    pub(crate) fn get_tx(&self) -> Transaction {
-        match self {
-            Transactions::List(list) => list[0].clone(),
-            Transactions::Item(tx) => tx.clone(),
-        }
-    }
-}
+pub(crate) struct Transactions(pub(crate) Transaction);
 
 impl Decodable for Transactions {
     fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
-        let attempt_txn = rlp.as_val::<Transaction>();
-        if let Ok(txn) = attempt_txn {
-            return Ok(Transactions::Item(txn));
+        if rlp.is_list() {
+            let txn = rlp.at(0)?.as_val::<Transaction>()?;
+            Ok(Transactions(txn))
+        } else {
+            let txn = rlp.as_val::<Transaction>()?;
+            Ok(Transactions(txn))
         }
-
-        let attempt_list: Result<Vec<Transaction>, DecoderError> = rlp.as_list();
-
-        if let Ok(list) = attempt_list {
-            if !list.is_empty() {
-                return Ok(Transactions::List(list));
-            }
-        }
-
-        let encoded_txn = rlp.at(0)?.as_val::<Vec<u8>>()?;
-        let tx = Transaction::decode(&Rlp::new(&encoded_txn))?;
-        Ok(Transactions::Item(tx))
     }
 }
 
@@ -309,7 +289,8 @@ impl Decodable for Transaction {
         // Somes tests have a different format and store the RLP encoding of the
         // transaction, which needs an additional layer of decoding.
         if attempt.is_err() && rlp.as_raw().len() >= 2 {
-            return Transaction::decode_actual_rlp(&rlp.as_raw()[2..]);
+            let encoded_txn = rlp.as_val::<Vec<u8>>()?;
+            return Transaction::decode_actual_rlp(&encoded_txn);
         }
 
         attempt
@@ -321,8 +302,8 @@ impl Decodable for Transaction {
 pub(crate) struct Withdrawal {
     pub(crate) _index: U256,
     pub(crate) _validator_index: U256,
-    pub(crate) _address: H160,
-    pub(crate) _amount: U256,
+    pub(crate) address: H160,
+    pub(crate) amount: U256,
 }
 
 #[derive(Debug, RlpDecodable)]
@@ -330,7 +311,7 @@ pub(crate) struct Block {
     pub(crate) block_header: BlockHeader,
     pub(crate) transactions: Transactions,
     pub(crate) _uncle_headers: Vec<BlockHeader>,
-    pub(crate) _withdrawals: Vec<Withdrawal>,
+    pub(crate) withdrawals: Vec<Withdrawal>,
 }
 
 #[derive(Debug, RlpDecodable)]
@@ -341,10 +322,21 @@ pub(crate) struct GenesisBlock {
     pub(crate) _withdrawals: Vec<Withdrawal>,
 }
 
+/// Contains the RLP encoding of the block, as well as the `transactionSequence`
+/// field (if any) to indicate if this test contains a malformed transaction
+/// that *should* be ignored for testing (as all input txns to plonky2 zkEVM are
+/// expected to be valid).
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct BlockRlp {
+pub(crate) struct BlockRlpWithExceptions {
     pub(crate) rlp: ByteString,
+    pub(crate) transaction_sequence: Option<Vec<TransactionSequence>>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TransactionSequence {
+    pub(crate) valid: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -358,6 +350,7 @@ pub(crate) struct PreAccount {
 
 #[derive(Debug)]
 pub(crate) struct TestBody {
+    pub(crate) name: String,
     pub(crate) block: Block,
     // The genesis block has an empty transactions list, which needs a
     // different handling than the logic present in `Block` decoding.
@@ -366,12 +359,13 @@ pub(crate) struct TestBody {
 }
 
 impl TestBody {
-    fn from_parsed_json(value: &ValueJson) -> Self {
+    fn from_parsed_json(value: &ValueJson, variant_name: String) -> Self {
         let block: Block = rlp::decode(&value.blocks[0].rlp.0).unwrap();
         let genesis_block: GenesisBlock =
             rlp::decode(&value.genesis_rlp.as_ref().unwrap().0).unwrap();
 
         Self {
+            name: variant_name,
             block,
             genesis_block,
             pre: value.pre.clone(),
@@ -379,7 +373,7 @@ impl TestBody {
     }
 
     pub(crate) fn get_tx(&self) -> Transaction {
-        self.block.transactions.get_tx()
+        self.block.transactions.0.clone()
     }
 }
 
@@ -387,7 +381,7 @@ impl TestBody {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct ValueJson {
-    pub(crate) blocks: Vec<BlockRlp>,
+    pub(crate) blocks: Vec<BlockRlpWithExceptions>,
     #[serde(rename = "genesisRLP")]
     pub(crate) genesis_rlp: Option<ByteString>,
     pub(crate) pre: HashMap<H160, PreAccount>,
@@ -432,8 +426,37 @@ impl<'de> Deserialize<'de> for TestFile {
                 // `Shanghai` in their key name.
                 while let Some((key, value)) = access.next_entry::<String, ValueJson>()? {
                     if key.contains("Shanghai") {
-                        let value = TestBody::from_parsed_json(&value);
-                        map.0.insert(key, value);
+                        if value.blocks[0].transaction_sequence.is_none() {
+                            let test_body = TestBody::from_parsed_json(&value, key.clone());
+
+                            // Sanity check: some tests *do not* abide by standard RLP encoding
+                            // rules, therefore causing discrepancies between the "expected"
+                            // encoding of the transaction that is part of the block RLP and used to
+                            // form the transactions trie, and the *regular* encoding computed here
+                            // after deserialization and to be fed to plonky2 zkEVM.
+                            {
+                                let rlp = &value.blocks[0].rlp.0;
+                                let encoded_txn = rlp::encode(&test_body.get_tx()).to_vec();
+                                // Ensure that the encoding we will provide the zkEVM prover is in
+                                // the block RLP.
+                                if rlp.windows(encoded_txn.len()).any(|c| c == encoded_txn) {
+                                    // Finally, ensure that the gas used fits in 32 bits, otherwise
+                                    // the prover will abort.
+                                    if TryInto::<u32>::try_into(
+                                        test_body.block.block_header.gas_used,
+                                    )
+                                    .is_ok()
+                                    {
+                                        map.0.insert(key, test_body);
+                                    }
+                                }
+                            }
+                        } else {
+                            // Some tests deal with malformed transactions that wouldn't be passed
+                            // to plonky2 zkEVM in the first place, so we just ignore them.
+                            let exception = value.blocks[0].transaction_sequence.as_ref().unwrap();
+                            assert_eq!(exception[0].valid, "false".to_string());
+                        }
                     }
                 }
 

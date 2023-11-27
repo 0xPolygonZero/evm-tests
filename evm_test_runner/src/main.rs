@@ -56,6 +56,7 @@ async fn run() -> anyhow::Result<bool> {
         report_type,
         variant_filter,
         skip_passed,
+        witness_only,
         test_timeout,
         parsed_tests_path,
         simple_progress_indicator,
@@ -119,6 +120,7 @@ async fn run() -> anyhow::Result<bool> {
         simple_progress_indicator,
         &mut persistent_test_state,
         abort_recv,
+        witness_only,
         test_timeout.map(|t| t.into()),
     ) {
         Ok(r) => r,
