@@ -650,6 +650,7 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "serde_with",
+ "smt_utils",
  "tokio",
 ]
 
@@ -1527,7 +1528,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 [[package]]
 name = "plonky2"
 version = "0.1.4"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=e41435e92789854fcff73040502e0768a4dd5ec0#e41435e92789854fcff73040502e0768a4dd5ec0"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/testing#106610a14df6969d61603db46618e96d1dc8cbf9"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1551,7 +1552,7 @@ dependencies = [
 [[package]]
 name = "plonky2_evm"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=e41435e92789854fcff73040502e0768a4dd5ec0#e41435e92789854fcff73040502e0768a4dd5ec0"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/testing#106610a14df6969d61603db46618e96d1dc8cbf9"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1578,6 +1579,7 @@ dependencies = [
  "rlp-derive",
  "serde",
  "serde_json",
+ "smt_utils",
  "static_assertions",
  "tiny-keccak",
 ]
@@ -1585,7 +1587,7 @@ dependencies = [
 [[package]]
 name = "plonky2_field"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=e41435e92789854fcff73040502e0768a4dd5ec0#e41435e92789854fcff73040502e0768a4dd5ec0"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/testing#106610a14df6969d61603db46618e96d1dc8cbf9"
 dependencies = [
  "anyhow",
  "itertools",
@@ -1600,7 +1602,7 @@ dependencies = [
 [[package]]
 name = "plonky2_maybe_rayon"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=e41435e92789854fcff73040502e0768a4dd5ec0#e41435e92789854fcff73040502e0768a4dd5ec0"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/testing#106610a14df6969d61603db46618e96d1dc8cbf9"
 dependencies = [
  "rayon",
 ]
@@ -1608,7 +1610,7 @@ dependencies = [
 [[package]]
 name = "plonky2_util"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=e41435e92789854fcff73040502e0768a4dd5ec0#e41435e92789854fcff73040502e0768a4dd5ec0"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/testing#106610a14df6969d61603db46618e96d1dc8cbf9"
 
 [[package]]
 name = "portable-atomic"
@@ -1961,6 +1963,26 @@ name = "smallvec"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
+
+[[package]]
+name = "smt_utils"
+version = "0.1.0"
+source = "git+https://github.com/0xPolygonZero/smt_utils.git#3a1ac78897930fb1b4842ed94e205e7e606e416a"
+dependencies = [
+ "bytes",
+ "enum-as-inner",
+ "ethereum-types",
+ "hex",
+ "keccak-hash 0.10.0",
+ "log",
+ "num-traits",
+ "parking_lot",
+ "rand",
+ "rlp",
+ "serde",
+ "thiserror",
+ "uint",
+]
 
 [[package]]
 name = "socket2"
