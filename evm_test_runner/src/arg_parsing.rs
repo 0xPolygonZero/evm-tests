@@ -42,6 +42,11 @@ pub(crate) struct ProgArgs {
     #[arg(short = 'p', long)]
     pub(crate) skip_passed: bool,
 
+    /// Only generate the witness and not the entire proof (significantly
+    /// faster, but may give false negatives).
+    #[arg(short = 'w', long)]
+    pub(crate) witness_only: bool,
+
     /// Mark a test as timed out if it takes longer than this amount of time.
     #[arg(short = 't', long)]
     pub(crate) test_timeout: Option<humantime::Duration>,

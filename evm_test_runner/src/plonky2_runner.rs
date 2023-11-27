@@ -10,13 +10,14 @@ use common::types::TestVariantRunInfo;
 use ethereum_types::U256;
 use futures::executor::block_on;
 use indicatif::{ProgressBar, ProgressStyle};
-use log::{trace, warn};
+use log::warn;
 use plonky2::{
     field::goldilocks_field::GoldilocksField, plonk::config::KeccakGoldilocksConfig,
     util::timing::TimingTree,
 };
 use plonky2_evm::{
-    all_stark::AllStark, config::StarkConfig, prover::prove, verifier::verify_proof,
+    all_stark::AllStark, config::StarkConfig, generation::generate_traces, prover::prove,
+    verifier::verify_proof,
 };
 use tokio::{select, time::timeout};
 
@@ -130,6 +131,7 @@ struct TestRunState<'a> {
     p_indicator: Box<dyn TestProgressIndicator>,
     persistent_test_state: &'a mut TestRunEntries,
     process_aborted_recv: ProcessAbortedRecv,
+    witness_only: bool,
     test_timeout: Duration,
 }
 
@@ -138,6 +140,7 @@ pub(crate) fn run_plonky2_tests(
     simple_progress_indicator: bool,
     persistent_test_state: &mut TestRunEntries,
     process_aborted: ProcessAbortedRecv,
+    witness_only: bool,
     test_timeout: Option<Duration>,
 ) -> RunnerResult<Vec<TestGroupRunResults>> {
     let num_tests = num_tests_in_groups(parsed_tests.iter());
@@ -152,6 +155,7 @@ pub(crate) fn run_plonky2_tests(
         p_indicator,
         persistent_test_state,
         process_aborted_recv: process_aborted,
+        witness_only,
         test_timeout,
     };
 
@@ -212,8 +216,6 @@ fn run_test_sub_group(
 }
 
 fn run_test(test: Test, t_state: &mut TestRunState) -> RunnerResult<TestRunResult> {
-    trace!("Running test {}...", test.name);
-
     t_state
         .p_indicator
         .set_current_test_name(test.name.to_string());
@@ -235,7 +237,7 @@ fn run_test_or_fail_on_timeout(
     t_state: &mut TestRunState,
 ) -> RunnerResult<TestStatus> {
     block_on(async {
-        let proof_gen_fut = async { run_test_and_get_test_result(test) };
+        let proof_gen_fut = async { run_test_and_get_test_result(test, t_state.witness_only) };
         let proof_gen_with_timeout_fut = timeout(t_state.test_timeout, proof_gen_fut);
         let process_aborted_fut = t_state.process_aborted_recv.recv();
 
@@ -253,7 +255,7 @@ fn run_test_or_fail_on_timeout(
 }
 
 /// Run a test against `plonky2` and output a result based on what happens.
-fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
+fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) -> TestStatus {
     let timing = TimingTree::new("prove", log::Level::Debug);
 
     // plonky2 does not support a block gaslimit that does not fit in a u32
@@ -268,38 +270,60 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo) -> TestStatus {
         inputs.block_metadata.block_gaslimit = U256::from(u32::MAX);
     }
 
-    let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
-        &AllStark::default(),
-        &StarkConfig::standard_fast_config(),
-        inputs,
-        &mut TimingTree::default(),
-    );
+    match witness_only {
+        true => {
+            let res = generate_traces::<GoldilocksField, 2>(
+                &AllStark::default(),
+                inputs,
+                &StarkConfig::standard_fast_config(),
+                &mut TimingTree::default(),
+            );
 
-    timing.filter(Duration::from_millis(100)).print();
-
-    let proof_run_output = match proof_run_res {
-        Ok(v) => v,
-        Err(evm_err) => {
-            if is_gaslimit_changed {
-                // We altered the inputs, so we just skip this test in case of failure.
-                return TestStatus::Ignored;
+            if let Err(evm_err) = res {
+                return handle_evm_err(evm_err, is_gaslimit_changed, "witness generation");
             }
-
-            // The prover failed with unmodified inputs, so this is an actual error.
-            warn!("Proving failed with error: {:?}", evm_err);
-            return TestStatus::EvmErr(evm_err.to_string());
         }
-    };
+        false => {
+            let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
+                &AllStark::default(),
+                &StarkConfig::standard_fast_config(),
+                inputs,
+                &mut TimingTree::default(),
+            );
 
-    let verif_output = verify_proof(
-        &AllStark::default(),
-        proof_run_output,
-        &StarkConfig::standard_fast_config(),
-    );
-    if verif_output.is_err() {
-        warn!("Verification failed with error: {:?}", verif_output);
-        return TestStatus::EvmErr("Proof verification failed.".to_string());
+            timing.filter(Duration::from_millis(100)).print();
+
+            let proof_run_output = match proof_run_res {
+                Ok(v) => v,
+                Err(evm_err) => return handle_evm_err(evm_err, is_gaslimit_changed, "Proving"),
+            };
+
+            let verif_output = verify_proof(
+                &AllStark::default(),
+                proof_run_output,
+                &StarkConfig::standard_fast_config(),
+            );
+            if verif_output.is_err() {
+                warn!("Verification failed with error: {:?}", verif_output);
+                return TestStatus::EvmErr("Proof verification failed.".to_string());
+            }
+        }
     }
 
     TestStatus::Passed
+}
+
+fn handle_evm_err(
+    evm_err: anyhow::Error,
+    is_gaslimit_changed: bool,
+    gen_type: &'static str,
+) -> TestStatus {
+    if is_gaslimit_changed {
+        // We altered the inputs, so we just skip this test in case of failure.
+        return TestStatus::Ignored;
+    }
+
+    // The prover failed with unmodified inputs, so this is an actual error.
+    warn!("{} failed with error: {:?}", gen_type, evm_err);
+    TestStatus::EvmErr(evm_err.to_string())
 }
