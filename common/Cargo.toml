@@ -12,5 +12,5 @@ anyhow = { version = "1.0.71", features = ["backtrace"] }
 ethereum-types = "0.14.1"
 eth_trie_utils = { git = "https://github.com/0xPolygonZero/eth_trie_utils.git", rev = "e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5" }
 flexi_logger = { version = "0.25.4", features = ["async"] }
-plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "b9328815e666981d6485b0d8dc04160e93797993" }
+plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "30c944f778afca950ffe691bf66a21dca79ebc78" }
 serde = {version = "1.0.163", features = ["derive"] }

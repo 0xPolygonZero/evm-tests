@@ -9,8 +9,8 @@ edition = "2021"
 
 [dependencies]
 common = { path = "../common" }
-plonky2 = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "b9328815e666981d6485b0d8dc04160e93797993" }
-plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "b9328815e666981d6485b0d8dc04160e93797993" }
+plonky2 = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "30c944f778afca950ffe691bf66a21dca79ebc78" }
+plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "30c944f778afca950ffe691bf66a21dca79ebc78" }
 
 anyhow = { version = "1.0", features = ["backtrace"] }
 askama = "0.12.0"
