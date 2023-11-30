@@ -55,9 +55,7 @@ impl ParsedTestManifest {
                     addresses: t_var.plonky2_metadata.addresses.clone(),
                     txn_number_before: U256::zero(),
                     gas_used_before: U256::zero(),
-                    block_bloom_before: [U256::zero(); 8],
                     gas_used_after: t_var.plonky2_metadata.block_metadata.block_gas_used,
-                    block_bloom_after: t_var.plonky2_metadata.block_metadata.block_bloom,
                     withdrawals: t_var.plonky2_metadata.withdrawals,
                     block_hashes: BlockHashes::default(),
                 };
