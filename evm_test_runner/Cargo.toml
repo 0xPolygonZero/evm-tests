@@ -9,8 +9,8 @@ edition = "2021"
 
 [dependencies]
 common = { path = "../common" }
-plonky2 = "0.1.4" # NOTE: Make sure that this version matches the one used by plonky2_evm when bumping to newer versions.
-plonky2_evm = { git = "https://github.com/mir-protocol/plonky2.git", rev = "6f98fd762885e9b5343af5f0e3f0c9c90e8cf3ab" }
+plonky2 = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "5572da30d7ab818594cf8659839fa832dfcf1d3d" }
+plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "5572da30d7ab818594cf8659839fa832dfcf1d3d" }
 
 anyhow = { version = "1.0", features = ["backtrace"] }
 askama = "0.12.0"
@@ -29,8 +29,6 @@ serde_cbor = "0.11.2"
 termimad = "0.23.0"
 tokio = {version = "1.28.1", features = ["fs", "macros", "rt-multi-thread"] }
 tokio-stream = {version  = "0.1.14", features = ["fs"] }
-revm = "3.3.0"
 similar = { version = "2.2.1", features = ["inline"] }
-ruint = { version = "1.8.0", features = ["primitive-types"] }
 keccak-hash = "0.10.0"
 console = "0.15.6"

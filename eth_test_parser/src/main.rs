@@ -18,7 +18,6 @@ mod config;
 mod deserialize;
 mod eth_tests_fetching;
 mod fs_scaffolding;
-mod revm_builder;
 mod trie_builder;
 mod utils;
 
@@ -45,23 +44,12 @@ async fn run(ProgArgs { no_fetch, out_path }: ProgArgs) -> anyhow::Result<()> {
 
     let generation_input_handles = get_deserialized_test_bodies()?.filter_map(|res| {
         match res {
-            Ok((test_dir_entry, test_body)) => Some(tokio::task::spawn_blocking(move || {
-                let parsed_test = test_body.as_plonky2_test_input();
-                let revm_variants = match test_body.as_serializable_evm_instances() {
-                    Ok(revm_variants) => Some(revm_variants),
-                    Err(err) => {
-                        warn!(
-                            "Unable to generate evm instance for test {} due to error: {}. Skipping!",
-                            test_dir_entry.path().display(),
-                            err
-                        );
-                        None
-                    }
-                };
-
+            Ok((test_dir_entry, test_bodies)) => Some(tokio::task::spawn_blocking(move || {
                 let test_manifest = ParsedTestManifest {
-                    plonky2_variants: parsed_test,
-                    revm_variants,
+                    plonky2_variants: test_bodies
+                        .iter()
+                        .map(|t| t.as_plonky2_test_inputs())
+                        .collect(),
                 };
 
                 (test_dir_entry, serde_cbor::to_vec(&test_manifest).unwrap())

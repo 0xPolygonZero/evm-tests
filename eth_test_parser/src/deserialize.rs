@@ -1,43 +1,23 @@
-#![allow(dead_code)]
-use std::collections::HashMap;
-use std::str::FromStr;
+use std::{collections::HashMap, marker::PhantomData};
 
-use ethereum_types::{Address, H160, H256, U256, U512};
+use anyhow::Result;
+use bytes::Bytes;
+use ethereum_types::{Address, H160, H256, U256};
 use hex::FromHex;
+use plonky2_evm::generation::mpt::transaction_testing::{
+    AccessListItemRlp, AccessListTransactionRlp, AddressOption, FeeMarketTransactionRlp,
+    LegacyTransactionRlp,
+};
+use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
+use rlp_derive::RlpDecodable;
+use serde::de::MapAccess;
 use serde::{
     de::{Error, Visitor},
     Deserialize, Deserializer,
 };
-use serde_with::{serde_as, DefaultOnNull, NoneAsEmptyString};
+use serde_with::serde_as;
 
-/// In a couple tests, an entry in the `transaction.value` key will contain
-/// the prefix, `0x:bigint`, in addition to containing a value greater than 256
-/// bits. This breaks U256 deserialization in two ways:
-/// 1. The `0x:bigint` prefix breaks string parsing.
-/// 2. The value will be greater than 256 bits.
-///
-/// This helper takes care of stripping that prefix, if it exists, and
-/// additionally pads the value with a U512 to catch overflow. Note that this
-/// implementation is specific to a Vec<_>; in the event that this syntax is
-/// found to occur more often than this particular instance
-/// (`transaction.value`), this logic should be broken out to be modular.
-///
-/// See [this test](https://github.com/ethereum/tests/blob/develop/GeneralStateTests/stTransactionTest/ValueOverflow.json#L197) for a concrete example.
-fn vec_eth_big_int_u512<'de, D>(deserializer: D) -> Result<Vec<U512>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: Vec<String> = Deserialize::deserialize(deserializer)?;
-    const BIG_INT_PREFIX: &str = "0x:bigint ";
-
-    s.into_iter()
-        .map(|s| {
-            U512::from_str(s.strip_prefix(BIG_INT_PREFIX).unwrap_or(&s)).map_err(D::Error::custom)
-        })
-        .collect()
-}
-
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 // "self" just points to this module.
 pub(crate) struct ByteString(#[serde(with = "self")] pub(crate) Vec<u8>);
 
@@ -85,51 +65,281 @@ where
     u64::from_str_radix(&s[2..], 16).map_err(D::Error::custom)
 }
 
-fn vec_u64_from_hex<'de, D>(deserializer: D) -> Result<Vec<u64>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: Vec<String> = Deserialize::deserialize(deserializer)?;
-    s.into_iter()
-        .map(|x| u64::from_str_radix(&x[2..], 16).map_err(D::Error::custom))
-        .collect::<Result<Vec<_>, D::Error>>()
+/// Helper struct to handle decoding fields that *may* not be present
+/// in the RLP string.
+#[derive(Clone, Debug, Default)]
+pub(crate) struct FieldOption<T: Decodable>(pub(crate) Option<T>);
+
+impl<T: Decodable> Decodable for FieldOption<T> {
+    fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
+        if rlp.is_empty() {
+            Ok(FieldOption(None))
+        } else {
+            Ok(FieldOption(Some(T::decode(rlp)?)))
+        }
+    }
+}
+
+/// An Ethereum block header that can be RLP decoded.
+#[derive(Clone, Debug, Default, RlpDecodable)]
+pub(crate) struct BlockHeader {
+    pub(crate) _parent_hash: H256,
+    pub(crate) _uncle_hash: H256,
+    pub(crate) coinbase: H160,
+    pub(crate) state_root: H256,
+    pub(crate) transactions_trie: H256,
+    pub(crate) receipt_trie: H256,
+    pub(crate) bloom: Bytes,
+    pub(crate) difficulty: U256,
+    pub(crate) number: U256,
+    pub(crate) gas_limit: U256,
+    pub(crate) gas_used: U256,
+    pub(crate) timestamp: U256,
+    pub(crate) _extra_data: Bytes,
+    pub(crate) mix_hash: H256,
+    // Storing nonce as a `U256` leads to RLP decoding failure for some
+    // specific cases. As we are not using the nonce anyway, we can just
+    // define it as `Vec<u8>` to be fine all the time.
+    pub(crate) _nonce: Vec<u8>,
+    pub(crate) base_fee_per_gas: U256,
+    pub(crate) _withdrawals_root: FieldOption<H256>,
+}
+
+// Some tests store the access list in a way that doesn't respect the specs,
+// and hence they require a specific handling.
+#[derive(Clone, Debug, RlpDecodable)]
+pub struct AccessItemRlp {
+    pub address: Address,
+    pub storage_keys: Vec<StorageKey>,
+}
+
+#[derive(Clone, Debug)]
+pub struct StorageKey(pub U256);
+
+impl Decodable for StorageKey {
+    fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
+        // Decode the key as a `Vec<u8>` to deal with badly encoded scalars,
+        // and then convert back to U256.
+        let key = rlp.as_val::<Vec<u8>>()?;
+        if key.len() == 1 && key[0] == 0x80 {
+            return Ok(StorageKey(U256::zero()));
+        }
+
+        Ok(StorageKey(U256::from_big_endian(&key)))
+    }
+}
+
+impl AccessItemRlp {
+    fn into_regular(self) -> AccessListItemRlp {
+        AccessListItemRlp {
+            address: self.address,
+            storage_keys: self.storage_keys.iter().map(|k| k.0).collect(),
+        }
+    }
+}
+
+// Some tests represent the `transactions` field of their block in the RLP
+// string in a way that doesn't respect the specs, and hence they require a
+// specific handling. The different cases are:
+// - a regular list of items (i.e. transactions)
+// - a single item (i.e. transaction) but not a list
+// - a list of strings (i.e. encodings of transactions)
+#[derive(Debug)]
+pub(crate) struct Transactions(pub(crate) Transaction);
+
+impl Decodable for Transactions {
+    fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
+        if rlp.is_list() {
+            let txn = rlp.at(0)?.as_val::<Transaction>()?;
+            Ok(Transactions(txn))
+        } else {
+            let txn = rlp.as_val::<Transaction>()?;
+            Ok(Transactions(txn))
+        }
+    }
+}
+
+// A custom type-1 txn to handle some edge-cases with the access_list field.
+#[derive(RlpDecodable, Debug, Clone)]
+pub struct CustomAccessListTransactionRlp {
+    pub chain_id: u64,
+    pub nonce: U256,
+    pub gas_price: U256,
+    pub gas: U256,
+    pub to: AddressOption,
+    pub value: U256,
+    pub data: Bytes,
+    pub access_list: Vec<AccessItemRlp>,
+    pub y_parity: U256,
+    pub r: U256,
+    pub s: U256,
+}
+
+impl CustomAccessListTransactionRlp {
+    fn into_regular(self) -> AccessListTransactionRlp {
+        AccessListTransactionRlp {
+            chain_id: self.chain_id,
+            nonce: self.nonce,
+            gas_price: self.gas_price,
+            gas: self.gas,
+            to: self.to.clone(),
+            value: self.value,
+            data: self.data.clone(),
+            access_list: self
+                .access_list
+                .clone()
+                .into_iter()
+                .map(|x| x.into_regular())
+                .collect(),
+            y_parity: self.y_parity,
+            r: self.r,
+            s: self.s,
+        }
+    }
+}
+
+// A custom type-2 txn to handle some edge-cases with the access_list field.
+#[derive(RlpDecodable, Debug, Clone)]
+pub struct CustomFeeMarketTransactionRlp {
+    pub chain_id: u64,
+    pub nonce: U256,
+    pub max_priority_fee_per_gas: U256,
+    pub max_fee_per_gas: U256,
+    pub gas: U256,
+    pub to: AddressOption,
+    pub value: U256,
+    pub data: Bytes,
+    pub access_list: Vec<AccessItemRlp>,
+    pub y_parity: U256,
+    pub r: U256,
+    pub s: U256,
+}
+
+impl CustomFeeMarketTransactionRlp {
+    fn into_regular(self) -> FeeMarketTransactionRlp {
+        FeeMarketTransactionRlp {
+            chain_id: self.chain_id,
+            nonce: self.nonce,
+            max_priority_fee_per_gas: self.max_priority_fee_per_gas,
+            max_fee_per_gas: self.max_fee_per_gas,
+            gas: self.gas,
+            to: self.to.clone(),
+            value: self.value,
+            data: self.data.clone(),
+            access_list: self
+                .access_list
+                .clone()
+                .into_iter()
+                .map(|x| x.into_regular())
+                .collect(),
+            y_parity: self.y_parity,
+            r: self.r,
+            s: self.s,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum Transaction {
+    Legacy(LegacyTransactionRlp),
+    AccessList(AccessListTransactionRlp),
+    FeeMarket(FeeMarketTransactionRlp),
+}
+
+impl Transaction {
+    fn decode_actual_rlp(bytes: &[u8]) -> Result<Self, DecoderError> {
+        let first_byte = bytes.first().ok_or(DecoderError::RlpInvalidLength)?;
+        match *first_byte {
+            1 => CustomAccessListTransactionRlp::decode(&Rlp::new(&bytes[1..]))
+                .map(|tx| Transaction::AccessList(tx.into_regular())),
+            2 => CustomFeeMarketTransactionRlp::decode(&Rlp::new(&bytes[1..]))
+                .map(|tx| Transaction::FeeMarket(tx.into_regular())),
+            _ => LegacyTransactionRlp::decode(&Rlp::new(bytes)).map(Transaction::Legacy),
+        }
+    }
+}
+
+impl Encodable for Transaction {
+    fn rlp_append(&self, s: &mut RlpStream) {
+        match self {
+            Transaction::Legacy(tx) => s.append(tx),
+            Transaction::AccessList(tx) => {
+                s.encoder().encode_value(&[0x01]);
+                s.append(tx)
+            }
+            Transaction::FeeMarket(tx) => {
+                s.encoder().encode_value(&[0x02]);
+                s.append(tx)
+            }
+        };
+    }
+}
+
+impl Decodable for Transaction {
+    fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
+        let first_byte = rlp.as_raw().first().ok_or(DecoderError::RlpInvalidLength)?;
+        let attempt = match *first_byte {
+            1 => CustomAccessListTransactionRlp::decode(&Rlp::new(&rlp.as_raw()[1..]))
+                .map(|tx| Transaction::AccessList(tx.into_regular())),
+            2 => CustomFeeMarketTransactionRlp::decode(&Rlp::new(&rlp.as_raw()[1..]))
+                .map(|tx| Transaction::FeeMarket(tx.into_regular())),
+            _ => LegacyTransactionRlp::decode(rlp).map(Transaction::Legacy),
+        };
+
+        // Somes tests have a different format and store the RLP encoding of the
+        // transaction, which needs an additional layer of decoding.
+        if attempt.is_err() && rlp.as_raw().len() >= 2 {
+            let encoded_txn = rlp.as_val::<Vec<u8>>()?;
+            return Transaction::decode_actual_rlp(&encoded_txn);
+        }
+
+        attempt
+    }
+}
+
+// Only needed for proper RLP decoding
+#[derive(Debug, RlpDecodable)]
+pub(crate) struct Withdrawal {
+    pub(crate) _index: U256,
+    pub(crate) _validator_index: U256,
+    pub(crate) address: H160,
+    pub(crate) amount: U256,
+}
+
+#[derive(Debug, RlpDecodable)]
+pub(crate) struct Block {
+    pub(crate) block_header: BlockHeader,
+    pub(crate) transactions: Transactions,
+    pub(crate) _uncle_headers: Vec<BlockHeader>,
+    pub(crate) withdrawals: Vec<Withdrawal>,
+}
+
+#[derive(Debug, RlpDecodable)]
+pub(crate) struct GenesisBlock {
+    pub(crate) block_header: BlockHeader,
+    pub(crate) _transactions: Vec<Transaction>,
+    pub(crate) _uncle_headers: Vec<BlockHeader>,
+    pub(crate) _withdrawals: Vec<Withdrawal>,
+}
+
+/// Contains the RLP encoding of the block, as well as the `transactionSequence`
+/// field (if any) to indicate if this test contains a malformed transaction
+/// that *should* be ignored for testing (as all input txns to plonky2 zkEVM are
+/// expected to be valid).
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct BlockRlpWithExceptions {
+    pub(crate) rlp: ByteString,
+    pub(crate) transaction_sequence: Option<Vec<TransactionSequence>>,
 }
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct Env {
-    pub(crate) current_base_fee: U256,
-    pub(crate) current_coinbase: H160,
-    pub(crate) current_difficulty: U256,
-    pub(crate) current_gas_limit: U256,
-    pub(crate) current_number: U256,
-    pub(crate) current_random: U256,
-    pub(crate) current_timestamp: U256,
-    pub(crate) previous_hash: H256,
+pub(crate) struct TransactionSequence {
+    pub(crate) valid: String,
 }
 
-#[derive(Deserialize, Debug)]
-pub(crate) struct PostStateIndexes {
-    pub(crate) data: usize,
-    pub(crate) gas: usize,
-    pub(crate) value: usize,
-}
-
-#[derive(Deserialize, Debug)]
-pub(crate) struct PostState {
-    pub(crate) hash: H256,
-    pub(crate) indexes: PostStateIndexes,
-    pub(crate) logs: H256,
-    pub(crate) txbytes: ByteString,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
-pub(crate) struct Post {
-    pub(crate) shanghai: Vec<PostState>,
-}
-
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub(crate) struct PreAccount {
     pub(crate) balance: U256,
     pub(crate) code: ByteString,
@@ -138,48 +348,124 @@ pub(crate) struct PreAccount {
     pub(crate) storage: HashMap<U256, U256>,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct AccessList {
-    pub(crate) address: Address,
-    #[serde(default)]
-    pub(crate) storage_keys: Vec<U256>,
-}
-
-#[serde_as]
-#[derive(Deserialize, Debug)]
-/// This is a wrapper around a `Vec<AccessList>` that is used to deserialize a
-/// `null` into an empty vec.
-pub(crate) struct AccessListsInner(
-    #[serde_as(deserialize_as = "DefaultOnNull")] pub(crate) Vec<AccessList>,
-);
-
-#[serde_as]
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct Transaction {
-    #[serde(default)]
-    pub(crate) access_lists: Vec<AccessListsInner>,
-    pub(crate) data: Vec<ByteString>,
-    #[serde(deserialize_with = "vec_u64_from_hex")]
-    pub(crate) gas_limit: Vec<u64>,
-    pub(crate) gas_price: Option<U256>,
-    pub(crate) nonce: U256,
-    pub(crate) secret_key: H256,
-    pub(crate) sender: H160,
-    #[serde_as(as = "NoneAsEmptyString")]
-    pub(crate) to: Option<H160>,
-    // Protect against overflow.
-    #[serde(deserialize_with = "vec_eth_big_int_u512")]
-    pub(crate) value: Vec<U512>,
-}
-
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 pub(crate) struct TestBody {
-    pub(crate) env: Env,
-    pub(crate) post: Post,
-    pub(crate) transaction: Transaction,
+    pub(crate) name: String,
+    pub(crate) block: Block,
+    // The genesis block has an empty transactions list, which needs a
+    // different handling than the logic present in `Block` decoding.
+    pub(crate) genesis_block: GenesisBlock,
     pub(crate) pre: HashMap<H160, PreAccount>,
+}
+
+impl TestBody {
+    fn from_parsed_json(value: &ValueJson, variant_name: String) -> Self {
+        let block: Block = rlp::decode(&value.blocks[0].rlp.0).unwrap();
+        let genesis_block: GenesisBlock =
+            rlp::decode(&value.genesis_rlp.as_ref().unwrap().0).unwrap();
+
+        Self {
+            name: variant_name,
+            block,
+            genesis_block,
+            pre: value.pre.clone(),
+        }
+    }
+
+    pub(crate) fn get_tx(&self) -> Transaction {
+        self.block.transactions.0.clone()
+    }
+}
+
+#[serde_as]
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct ValueJson {
+    pub(crate) blocks: Vec<BlockRlpWithExceptions>,
+    #[serde(rename = "genesisRLP")]
+    pub(crate) genesis_rlp: Option<ByteString>,
+    pub(crate) pre: HashMap<H160, PreAccount>,
+}
+
+// Wrapper around a regular `HashMap` used to conveniently skip
+// non-Shanghai related tests when deserializing.
+#[derive(Default, Debug)]
+pub(crate) struct TestFile(pub(crate) HashMap<String, TestBody>);
+
+impl<'de> Deserialize<'de> for TestFile {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct TestFileVisitor {
+            marker: PhantomData<fn() -> TestFile>,
+        }
+
+        impl TestFileVisitor {
+            fn new() -> Self {
+                TestFileVisitor {
+                    marker: PhantomData,
+                }
+            }
+        }
+
+        impl<'de> Visitor<'de> for TestFileVisitor {
+            type Value = TestFile;
+
+            fn expecting(&self, formatter: &mut core::fmt::Formatter) -> core::fmt::Result {
+                formatter.write_str("a `TestFile` map")
+            }
+
+            fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
+            where
+                M: MapAccess<'de>,
+            {
+                let mut map = TestFile(HashMap::with_capacity(access.size_hint().unwrap_or(0)));
+
+                // While we are parsing many values, we only care about the ones containing
+                // `Shanghai` in their key name.
+                while let Some((key, value)) = access.next_entry::<String, ValueJson>()? {
+                    if key.contains("Shanghai") {
+                        if value.blocks[0].transaction_sequence.is_none() {
+                            let test_body = TestBody::from_parsed_json(&value, key.clone());
+
+                            // Sanity check: some tests *do not* abide by standard RLP encoding
+                            // rules, therefore causing discrepancies between the "expected"
+                            // encoding of the transaction that is part of the block RLP and used to
+                            // form the transactions trie, and the *regular* encoding computed here
+                            // after deserialization and to be fed to plonky2 zkEVM.
+                            {
+                                let rlp = &value.blocks[0].rlp.0;
+                                let encoded_txn = rlp::encode(&test_body.get_tx()).to_vec();
+                                // Ensure that the encoding we will provide the zkEVM prover is in
+                                // the block RLP.
+                                if rlp.windows(encoded_txn.len()).any(|c| c == encoded_txn) {
+                                    // Finally, ensure that the gas used fits in 32 bits, otherwise
+                                    // the prover will abort.
+                                    if TryInto::<u32>::try_into(
+                                        test_body.block.block_header.gas_used,
+                                    )
+                                    .is_ok()
+                                    {
+                                        map.0.insert(key, test_body);
+                                    }
+                                }
+                            }
+                        } else {
+                            // Some tests deal with malformed transactions that wouldn't be passed
+                            // to plonky2 zkEVM in the first place, so we just ignore them.
+                            let exception = value.blocks[0].transaction_sequence.as_ref().unwrap();
+                            assert_eq!(exception[0].valid, "false".to_string());
+                        }
+                    }
+                }
+
+                Ok(map)
+            }
+        }
+
+        deserializer.deserialize_map(TestFileVisitor::new())
+    }
 }
 
 #[cfg(test)]

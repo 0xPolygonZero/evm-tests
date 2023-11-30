@@ -1,7 +1,6 @@
 //! Filesystem helpers. A set of convenience functions for interacting with test
 //! input and output directories.
 use std::{
-    collections::HashMap,
     fs::{self, DirEntry, File},
     io::BufReader,
     path::{Path, PathBuf},
@@ -10,8 +9,10 @@ use std::{
 use anyhow::{anyhow, Result};
 use common::config::GENERATION_INPUTS_DEFAULT_OUTPUT_DIR;
 
-use crate::config::{ETH_TESTS_REPO_LOCAL_PATH, TEST_GROUPS};
-use crate::deserialize::TestBody;
+use crate::{
+    config::{ETH_TESTS_REPO_LOCAL_PATH, GENERAL_GROUP, TEST_GROUPS},
+    deserialize::{TestBody, TestFile},
+};
 
 /// Get the default parsed test output directory.
 /// We first check if the flat file, `ETH_TEST_PARSER_DEV`, exists
@@ -49,7 +50,7 @@ pub(crate) fn get_default_out_dir() -> anyhow::Result<PathBuf> {
 /// // │   └── {test_case_n}.json
 /// ```
 pub(crate) fn get_test_group_dirs() -> Result<impl Iterator<Item = DirEntry>> {
-    let dirs = fs::read_dir(ETH_TESTS_REPO_LOCAL_PATH)?
+    let dirs = fs::read_dir(ETH_TESTS_REPO_LOCAL_PATH.to_owned() + "/" + GENERAL_GROUP)?
         .flatten()
         .filter(|entry| match entry.file_name().to_str() {
             Some(file_name) => TEST_GROUPS.contains(&file_name),
@@ -112,7 +113,7 @@ pub(crate) fn prepare_output_dir(out_path: &Path) -> Result<()> {
 /// Generate an iterator containing the deserialized test bodies (`TestBody`)
 /// and their `DirEntry`s.
 pub(crate) fn get_deserialized_test_bodies(
-) -> Result<impl Iterator<Item = Result<(DirEntry, TestBody), (String, String)>>> {
+) -> Result<impl Iterator<Item = Result<(DirEntry, Vec<TestBody>), (String, String)>>> {
     Ok(get_test_files()?.map(|entry| {
         let test_body = get_deserialized_test_body(&entry)
             .map_err(|err| (err.to_string(), entry.path().to_string_lossy().to_string()))?;
@@ -120,17 +121,19 @@ pub(crate) fn get_deserialized_test_bodies(
     }))
 }
 
-fn get_deserialized_test_body(entry: &DirEntry) -> Result<TestBody> {
+fn get_deserialized_test_body(entry: &DirEntry) -> Result<Vec<TestBody>> {
+    if entry.path().to_str().unwrap().contains("ValueOverflow") {
+        return Err(anyhow!(
+            "Test has invalid RLP encoding and hence cannot be processed"
+        ));
+    }
     let buf = BufReader::new(File::open(entry.path())?);
-    let file_json: HashMap<String, TestBody> = serde_json::from_reader(buf)?;
+    let test_file: TestFile = serde_json::from_reader(buf)?;
 
-    // Each test JSON always contains a single outer key containing the test name.
-    // The test name is irrelevant for deserialization purposes, so we always drop
-    // it.
-    let test_body = file_json
-        .into_values()
-        .next()
-        .ok_or_else(|| anyhow!("Empty test found: {:?}", entry))?;
-
-    anyhow::Ok(test_body)
+    let tests: Vec<TestBody> = test_file.0.into_values().collect();
+    if tests.is_empty() {
+        Err(anyhow!("No valid tests found"))
+    } else {
+        anyhow::Ok(tests)
+    }
 }

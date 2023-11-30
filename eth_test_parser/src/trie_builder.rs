@@ -9,8 +9,8 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use common::{
-    config,
-    types::{ConstGenerationInputs, Plonky2ParsedTest, TestVariant, TestVariantCommon},
+    config::ETHEREUM_CHAIN_ID,
+    types::{ExpectedFinalRoots, Plonky2ParsedTest, TestMetadata},
 };
 use eth_trie_utils::{
     nibbles::Nibbles,
@@ -22,7 +22,7 @@ use plonky2_evm::{generation::TrieInputs, proof::BlockMetadata};
 use rlp::Encodable;
 use rlp_derive::{RlpDecodable, RlpEncodable};
 
-use crate::deserialize::{Env, TestBody};
+use crate::deserialize::{Block, TestBody};
 
 #[derive(RlpDecodable, RlpEncodable)]
 pub(crate) struct AccountRlp {
@@ -32,34 +32,41 @@ pub(crate) struct AccountRlp {
     code_hash: H256,
 }
 
-impl Env {
+impl Block {
     fn block_metadata(&self) -> BlockMetadata {
+        let header = &self.block_header;
         BlockMetadata {
-            block_beneficiary: self.current_coinbase,
-            block_timestamp: self.current_timestamp,
-            block_number: self.current_number,
-            block_difficulty: self.current_difficulty,
-            block_gaslimit: self.current_gas_limit,
-            block_chain_id: config::ETHEREUM_CHAIN_ID.into(),
-            block_base_fee: self.current_base_fee,
+            block_beneficiary: header.coinbase,
+            block_timestamp: header.timestamp,
+            block_number: header.number,
+            block_difficulty: header.difficulty,
+            block_gaslimit: header.gas_limit,
+            block_chain_id: ETHEREUM_CHAIN_ID.into(),
+            block_base_fee: header.base_fee_per_gas,
+            block_random: header.mix_hash,
+            block_gas_used: header.gas_used,
+            block_bloom: header
+                .bloom
+                .chunks_exact(32)
+                .map(U256::from_big_endian)
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
         }
     }
 }
 
 impl TestBody {
-    pub fn as_plonky2_test_input(&self) -> Plonky2ParsedTest {
+    pub fn as_plonky2_test_inputs(&self) -> Plonky2ParsedTest {
+        let block = &self.block;
+
         let storage_tries = self.get_storage_tries();
         let state_trie = self.get_state_trie(&storage_tries);
 
         let tries = TrieInputs {
             state_trie,
-            transactions_trie: HashedPartialTrie::default(), /* TODO: Change to
-                                                              * self.get_txn_trie()
-                                                              * once
-                                                              * zkEVM supports it */
-            receipts_trie: HashedPartialTrie::default(), /* TODO: Fill in once we know what we
-                                                          * are
-                                                          * doing... */
+            transactions_trie: HashedPartialTrie::default(),
+            receipts_trie: HashedPartialTrie::default(),
             storage_tries,
         };
 
@@ -69,30 +76,32 @@ impl TestBody {
             .map(|pre| (hash(&pre.code.0), pre.code.0.clone()))
             .collect();
 
-        let test_variants = self
-            .post
-            .shanghai
-            .iter()
-            .map(|x| TestVariant {
-                txn_bytes: x.txbytes.0.clone(),
-                common: TestVariantCommon {
-                    expected_final_account_state_root_hash: x.hash,
-                },
-            })
-            .collect();
+        let header = &block.block_header;
 
         let addresses = self.pre.keys().copied().collect::<Vec<Address>>();
 
-        let const_plonky2_inputs = ConstGenerationInputs {
+        let plonky2_metadata = TestMetadata {
             tries,
             contract_code,
-            block_metadata: self.env.block_metadata(),
+            genesis_state_root: self.genesis_block.block_header.state_root,
+            block_metadata: self.block.block_metadata(),
             addresses,
+            withdrawals: block
+                .withdrawals
+                .iter()
+                .map(|w| (w.address, w.amount))
+                .collect(),
         };
 
         Plonky2ParsedTest {
-            test_variants,
-            const_plonky2_inputs,
+            test_name: self.name.clone(),
+            txn_bytes: self.get_txn_bytes(),
+            final_roots: ExpectedFinalRoots {
+                state_root_hash: header.state_root,
+                txn_trie_root_hash: header.transactions_trie,
+                receipts_trie_root_hash: header.receipt_trie,
+            },
+            plonky2_metadata,
         }
     }
 
@@ -138,25 +147,15 @@ impl TestBody {
             .collect()
     }
 
-    #[allow(unused)] // TODO: Will be used later.
-    fn get_txn_trie(&self) -> HashedPartialTrie {
-        self.post
-            .shanghai
-            .iter()
-            .enumerate()
-            .map(|(txn_idx, post)| {
-                (
-                    Nibbles::from_bytes_be(&txn_idx.to_be_bytes()).unwrap(),
-                    post.txbytes.0.clone(),
-                )
-            })
-            .collect()
+    pub(crate) fn get_txn_bytes(&self) -> Vec<u8> {
+        let transaction = &self.get_tx();
+        rlp::encode(transaction).to_vec()
     }
 }
 
 impl From<TestBody> for Plonky2ParsedTest {
     fn from(test_body: TestBody) -> Self {
-        test_body.as_plonky2_test_input()
+        test_body.as_plonky2_test_inputs()
     }
 }
 

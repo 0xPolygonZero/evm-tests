@@ -16,7 +16,7 @@ use std::{
 
 use anyhow::{anyhow, Context};
 use common::{
-    config::GENERATION_INPUTS_DEFAULT_OUTPUT_DIR,
+    config::{GENERATION_INPUTS_DEFAULT_OUTPUT_DIR, MAIN_TEST_DIR},
     types::{ParsedTestManifest, TestVariantRunInfo, VariantFilterType},
 };
 use log::{info, trace};
@@ -50,6 +50,7 @@ pub(crate) fn get_default_parsed_tests_path() -> anyhow::Result<PathBuf> {
         .map(|ancestor| {
             let mut buf = ancestor.to_path_buf();
             buf.push(GENERATION_INPUTS_DEFAULT_OUTPUT_DIR);
+            buf.push(MAIN_TEST_DIR);
             buf
         })
         .find(|path| path.exists())
@@ -180,18 +181,12 @@ async fn parse_test(
 
     let v_out = parsed_test.into_filtered_variants(variant_filter);
 
-    let root_test_name = get_file_stem(&path)?;
-    let t_name_f: Box<dyn Fn(usize) -> String> = match v_out.variants.len() {
-        1 if v_out.tot_variants_without_filter == 1 => Box::new(|_| root_test_name.clone()),
-        _ => Box::new(|i| format!("{}_{}", root_test_name, i)),
-    };
-
     let blacklist_ref = blacklist.as_deref();
     Ok(v_out
         .variants
         .into_iter()
         .filter_map(|info| {
-            let name = t_name_f(info.variant_idx);
+            let name = info.variant_name.clone();
             (!blacklisted(blacklist_ref, &name)).then_some(Test { name, info })
         })
         .collect())
