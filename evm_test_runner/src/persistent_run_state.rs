@@ -78,7 +78,7 @@ impl TestRunEntries {
         self.0.iter().filter_map(move |(name, info)| {
             info.pass_state
                 .get_passed_status(witness_only)
-                .then(|| name.as_str())
+                .then_some(name.as_str())
         })
     }
 }
