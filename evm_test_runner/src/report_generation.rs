@@ -118,7 +118,12 @@ impl From<TestSubGroupRunResults> for TemplateSubGroupResultsData {
         let tests: Vec<TestRunResult> = v.test_res.into_iter().collect();
         let num_passed = tests
             .iter()
-            .filter(|t| matches!(t.status, TestStatus::Passed))
+            .filter(|t| {
+                matches!(
+                    t.status,
+                    TestStatus::PassedProof | TestStatus::PassedWitness
+                )
+            })
             .count();
 
         Self {

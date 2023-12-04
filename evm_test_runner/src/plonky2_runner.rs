@@ -73,8 +73,8 @@ impl TestProgressIndicator for FancyProgressIndicator {
 
 #[derive(Clone, Debug)]
 pub(crate) enum TestStatus {
-    Passed,
-    #[allow(unused)]
+    PassedWitness,
+    PassedProof,
     Ignored,
     EvmErr(String),
     TimedOut,
@@ -83,7 +83,8 @@ pub(crate) enum TestStatus {
 impl Display for TestStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TestStatus::Passed => write!(f, "Passed"),
+            TestStatus::PassedWitness => write!(f, "Passed witness generation"),
+            TestStatus::PassedProof => write!(f, "Passed proof verification"),
             TestStatus::Ignored => write!(f, "Ignored"),
             TestStatus::EvmErr(err) => write!(f, "Evm error: {}", err),
             TestStatus::TimedOut => write!(f, "Test timed out"),
@@ -93,7 +94,7 @@ impl Display for TestStatus {
 
 impl TestStatus {
     pub(crate) fn passed(&self) -> bool {
-        matches!(self, TestStatus::Passed)
+        matches!(self, Self::PassedProof | Self::PassedWitness)
     }
 }
 
@@ -282,6 +283,8 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
             if let Err(evm_err) = res {
                 return handle_evm_err(evm_err, is_gaslimit_changed, "witness generation");
             }
+
+            return TestStatus::PassedWitness;
         }
         false => {
             let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
@@ -310,7 +313,7 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
         }
     }
 
-    TestStatus::Passed
+    TestStatus::PassedProof
 }
 
 fn handle_evm_err(

@@ -67,7 +67,7 @@ async fn run() -> anyhow::Result<bool> {
     let passed_t_names = skip_passed.then(|| {
         Arc::new(
             persistent_test_state
-                .get_tests_that_have_passed()
+                .get_tests_that_have_passed(witness_only)
                 .map(|t| t.to_string())
                 .collect(),
         )
