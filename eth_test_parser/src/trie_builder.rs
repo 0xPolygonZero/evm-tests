@@ -16,7 +16,7 @@ use eth_trie_utils::{
     nibbles::Nibbles,
     partial_trie::{HashedPartialTrie, PartialTrie},
 };
-use ethereum_types::{Address, H256, U256};
+use ethereum_types::{H256, U256};
 use keccak_hash::keccak;
 use plonky2_evm::{generation::TrieInputs, proof::BlockMetadata};
 use rlp::Encodable;
@@ -78,14 +78,11 @@ impl TestBody {
 
         let header = &block.block_header;
 
-        let addresses = self.pre.keys().copied().collect::<Vec<Address>>();
-
         let plonky2_metadata = TestMetadata {
             tries,
             contract_code,
             genesis_state_root: self.genesis_block.block_header.state_root,
             block_metadata: self.block.block_metadata(),
-            addresses,
             withdrawals: block
                 .withdrawals
                 .iter()

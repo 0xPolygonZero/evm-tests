@@ -52,7 +52,6 @@ impl ParsedTestManifest {
                     genesis_state_trie_root: t_var.plonky2_metadata.genesis_state_root,
                     contract_code: t_var.plonky2_metadata.contract_code.clone(),
                     block_metadata: t_var.plonky2_metadata.block_metadata.clone(),
-                    addresses: t_var.plonky2_metadata.addresses.clone(),
                     txn_number_before: U256::zero(),
                     gas_used_before: U256::zero(),
                     gas_used_after: t_var.plonky2_metadata.block_metadata.block_gas_used,
@@ -115,7 +114,6 @@ pub struct TestMetadata {
     pub genesis_state_root: H256,
     pub contract_code: HashMap<H256, Vec<u8>>,
     pub block_metadata: BlockMetadata,
-    pub addresses: Vec<Address>,
     pub withdrawals: Vec<(Address, U256)>,
 }
 
