@@ -259,34 +259,35 @@ fn run_test_or_fail_on_timeout(
 fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) -> TestStatus {
     let timing = TimingTree::new("prove", log::Level::Debug);
 
-    // plonky2 does not support a block gaslimit that does not fit in a u32
-    // If a test has such issue, we "try" proving it with an altered gaslimit,
-    // and will ignore it if proving the altered inputs failed so as to not
-    // have false positives.
-    let mut inputs = test.gen_inputs;
-    let is_gaslimit_changed =
-        TryInto::<u32>::try_into(inputs.block_metadata.block_gaslimit).is_err();
-
-    if is_gaslimit_changed {
-        inputs.block_metadata.block_gaslimit = U256::from(u32::MAX);
-    }
-
     match witness_only {
         true => {
             let res = generate_traces::<GoldilocksField, 2>(
                 &AllStark::default(),
-                inputs,
+                test.gen_inputs,
                 &StarkConfig::standard_fast_config(),
                 &mut TimingTree::default(),
             );
 
             if let Err(evm_err) = res {
-                return handle_evm_err(evm_err, is_gaslimit_changed, "witness generation");
+                return handle_evm_err(evm_err, false, "witness generation");
             }
 
             return TestStatus::PassedWitness;
         }
         false => {
+            // plonky2 zkEVM verifier does not support a block gaslimit that does not fit
+            // in a u32.
+            // If a test has such issue, we "try" proving it with an altered gaslimit, and
+            // will ignore it if proving the altered inputs failed so as to not
+            // have false positives.
+            let mut inputs = test.gen_inputs;
+            let is_gaslimit_changed =
+                TryInto::<u32>::try_into(inputs.block_metadata.block_gaslimit).is_err();
+
+            if is_gaslimit_changed {
+                inputs.block_metadata.block_gaslimit = U256::from(u32::MAX);
+            }
+
             let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
                 &AllStark::default(),
                 &StarkConfig::standard_fast_config(),
