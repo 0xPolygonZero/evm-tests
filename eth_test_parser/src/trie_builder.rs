@@ -16,7 +16,7 @@ use eth_trie_utils::{
     nibbles::Nibbles,
     partial_trie::{HashedPartialTrie, PartialTrie},
 };
-use ethereum_types::{Address, H256, U256};
+use ethereum_types::{H256, U256};
 use keccak_hash::keccak;
 use plonky2_evm::{generation::TrieInputs, proof::BlockMetadata};
 use rlp::Encodable;
