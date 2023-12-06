@@ -78,14 +78,11 @@ impl TestBody {
 
         let header = &block.block_header;
 
-        let addresses = self.pre.keys().copied().collect::<Vec<Address>>();
-
         let plonky2_metadata = TestMetadata {
             tries,
             contract_code,
             genesis_state_root: self.genesis_block.block_header.state_root,
             block_metadata: self.block.block_metadata(),
-            addresses,
             withdrawals: block
                 .withdrawals
                 .iter()
