@@ -49,7 +49,7 @@ impl ParsedTestManifest {
                     signed_txn: Some(t_var.txn_bytes),
                     tries: t_var.plonky2_metadata.tries.clone(),
                     trie_roots_after,
-                    genesis_state_trie_root: t_var.plonky2_metadata.genesis_state_root,
+                    checkpoint_state_trie_root: t_var.plonky2_metadata.genesis_state_root,
                     contract_code: t_var.plonky2_metadata.contract_code.clone(),
                     block_metadata: t_var.plonky2_metadata.block_metadata.clone(),
                     txn_number_before: U256::zero(),

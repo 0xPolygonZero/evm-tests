@@ -1527,7 +1527,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 [[package]]
 name = "plonky2"
 version = "0.1.4"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=47e24306b7dc224383712a6700986331615f3e2a#47e24306b7dc224383712a6700986331615f3e2a"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=71dff6e9827f501bc59416dc25ce06c4aec030ab#71dff6e9827f501bc59416dc25ce06c4aec030ab"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1551,7 +1551,7 @@ dependencies = [
 [[package]]
 name = "plonky2_evm"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=47e24306b7dc224383712a6700986331615f3e2a#47e24306b7dc224383712a6700986331615f3e2a"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=71dff6e9827f501bc59416dc25ce06c4aec030ab#71dff6e9827f501bc59416dc25ce06c4aec030ab"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1585,7 +1585,7 @@ dependencies = [
 [[package]]
 name = "plonky2_field"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=47e24306b7dc224383712a6700986331615f3e2a#47e24306b7dc224383712a6700986331615f3e2a"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=71dff6e9827f501bc59416dc25ce06c4aec030ab#71dff6e9827f501bc59416dc25ce06c4aec030ab"
 dependencies = [
  "anyhow",
  "itertools",
@@ -1600,7 +1600,7 @@ dependencies = [
 [[package]]
 name = "plonky2_maybe_rayon"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=47e24306b7dc224383712a6700986331615f3e2a#47e24306b7dc224383712a6700986331615f3e2a"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=71dff6e9827f501bc59416dc25ce06c4aec030ab#71dff6e9827f501bc59416dc25ce06c4aec030ab"
 dependencies = [
  "rayon",
 ]
@@ -1608,7 +1608,7 @@ dependencies = [
 [[package]]
 name = "plonky2_util"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=47e24306b7dc224383712a6700986331615f3e2a#47e24306b7dc224383712a6700986331615f3e2a"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=71dff6e9827f501bc59416dc25ce06c4aec030ab#71dff6e9827f501bc59416dc25ce06c4aec030ab"
 
 [[package]]
 name = "portable-atomic"
