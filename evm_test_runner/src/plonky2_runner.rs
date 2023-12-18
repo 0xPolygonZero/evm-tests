@@ -293,6 +293,7 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
                 &StarkConfig::standard_fast_config(),
                 inputs,
                 &mut TimingTree::default(),
+                None,
             );
 
             timing.filter(Duration::from_millis(100)).print();
