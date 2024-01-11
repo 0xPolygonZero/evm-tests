@@ -320,7 +320,7 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "eth_trie_utils 0.6.0 (git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5)",
+ "eth_trie_utils 0.6.0 (git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76)",
  "ethereum-types",
  "flexi_logger",
  "plonky2_evm",
@@ -636,7 +636,7 @@ dependencies = [
  "bytes",
  "clap",
  "common",
- "eth_trie_utils 0.6.0 (git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5)",
+ "eth_trie_utils 0.6.0 (git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76)",
  "ethereum-types",
  "flexi_logger",
  "futures",
@@ -675,7 +675,7 @@ dependencies = [
 [[package]]
 name = "eth_trie_utils"
 version = "0.6.0"
-source = "git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5#e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5"
+source = "git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76#7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76"
 dependencies = [
  "bytes",
  "enum-as-inner",
