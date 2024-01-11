@@ -320,7 +320,7 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "eth_trie_utils 0.6.0 (git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76)",
+ "eth_trie_utils",
  "ethereum-types",
  "flexi_logger",
  "plonky2_evm",
@@ -636,7 +636,7 @@ dependencies = [
  "bytes",
  "clap",
  "common",
- "eth_trie_utils 0.6.0 (git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76)",
+ "eth_trie_utils",
  "ethereum-types",
  "flexi_logger",
  "futures",
@@ -651,25 +651,6 @@ dependencies = [
  "serde_json",
  "serde_with",
  "tokio",
-]
-
-[[package]]
-name = "eth_trie_utils"
-version = "0.6.0"
-source = "git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76#7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76"
-dependencies = [
- "bytes",
- "enum-as-inner",
- "ethereum-types",
- "hex",
- "keccak-hash 0.10.0",
- "log",
- "num-traits",
- "parking_lot",
- "rlp",
- "serde",
- "thiserror",
- "uint",
 ]
 
 [[package]]
@@ -1575,7 +1556,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "env_logger",
- "eth_trie_utils 0.6.0 (git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76)",
+ "eth_trie_utils",
  "ethereum-types",
  "hashbrown 0.14.0",
  "hex-literal",
