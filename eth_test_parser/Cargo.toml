@@ -10,7 +10,7 @@ edition = "2021"
 [dependencies]
 common = { path = "../common" }
 eth_trie_utils = { git = "https://github.com/0xPolygonZero/eth_trie_utils.git", rev = "e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5" }
-plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "536cd1c89c7d5fc546ed4f1b8c9dd653300878ae" }
+plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "f80ebe77f38ecbf94ce3c357fcc5332344561b6d" }
 
 anyhow = { version = "1.0.71", features = ["backtrace"] }
 bytes = "1.4.0"
