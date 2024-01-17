@@ -2,15 +2,19 @@
 name = "common"
 description = "Common logic shared between the parser and the runner."
 version = "0.1.0"
-authors = ["Polygon Zero <bgluth@polygon.technology>"]
-edition = "2021"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = { version = "1.0.71", features = ["backtrace"] }
-ethereum-types = "0.14.1"
-eth_trie_utils = { git = "https://github.com/0xPolygonZero/eth_trie_utils.git", rev = "7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76" }
-flexi_logger = { version = "0.25.4", features = ["async"] }
-plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "b119e96f7f8dee57ebdbc6738e96891d2e628520" }
-serde = {version = "1.0.163", features = ["derive"] }
+anyhow = { workspace = true }
+ethereum-types = { workspace = true }
+eth_trie_utils = { workspace = true }
+flexi_logger = { workspace = true }
+plonky2_evm = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
