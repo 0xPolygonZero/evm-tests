@@ -2,33 +2,37 @@
 name = "evm_test_runner"
 description = "Test runner for Polygon Zero's EVM."
 version = "0.1.0"
-authors = ["Polygon Zero <bgluth@polygon.technology>"]
-edition = "2021"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 common = { path = "../common" }
-plonky2 = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "b119e96f7f8dee57ebdbc6738e96891d2e628520" }
-plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "b119e96f7f8dee57ebdbc6738e96891d2e628520" }
+plonky2 = { workspace = true }
+plonky2_evm = { workspace = true }
 
-anyhow = { version = "1.0", features = ["backtrace"] }
+anyhow = { workspace = true }
 askama = "0.12.0"
 chrono = { version = "0.4.24", features = ["serde"] }
-clap = {version = "4.2.7", features = ["derive"] }
+clap = { workspace = true }
+console = "0.15.6"
 csv = "1.2.1"
 ctrlc = "3.2.5"
-ethereum-types = "0.14.1"
-flexi_logger = { version = "0.25.4", features = ["async"] }
-futures = "0.3"
+ethereum-types = { workspace = true }
+flexi_logger = { workspace = true }
+futures = { workspace = true }
 humantime = "2.1.0"
 indicatif = "0.17.3"
-log = "0.4.17"
-serde = "1.0.163"
-serde_cbor = "0.11.2"
-termimad = "0.23.0"
-tokio = {version = "1.28.1", features = ["fs", "macros", "rt-multi-thread"] }
-tokio-stream = {version  = "0.1.14", features = ["fs"] }
+keccak-hash = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true }
+serde_cbor = { workspace = true }
 similar = { version = "2.2.1", features = ["inline"] }
-keccak-hash = "0.10.0"
-console = "0.15.6"
+termimad = "0.23.0"
+tokio = { workspace = true, features = ["fs", "macros", "rt-multi-thread"] }
+tokio-stream = {version  = "0.1.14", features = ["fs"] }

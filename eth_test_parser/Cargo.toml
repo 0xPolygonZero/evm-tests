@@ -2,29 +2,33 @@
 name = "eth_test_parser"
 description = "Downloads and parses common Ethereum tests into a format runnable by Polygon Zero's EVM."
 version = "0.1.0"
-authors = ["Polygon Zero <bgluth@polygon.technology>"]
-edition = "2021"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 common = { path = "../common" }
-eth_trie_utils = { git = "https://github.com/0xPolygonZero/eth_trie_utils.git", rev = "7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76" }
-plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "b119e96f7f8dee57ebdbc6738e96891d2e628520" }
+eth_trie_utils = { workspace = true }
+plonky2_evm = { workspace = true }
 
-anyhow = { version = "1.0.71", features = ["backtrace"] }
+anyhow = { workspace = true }
 bytes = "1.4.0"
-clap = {version = "4.2.7", features = ["derive"] }
-ethereum-types = "0.14.1"
+clap = { workspace = true }
+ethereum-types = { workspace = true }
+flexi_logger = { workspace = true }
+futures = { workspace = true }
 hex = { version = "0.4.3", features = ["serde"] }
-flexi_logger = { version = "0.25.4", features = ["async"] }
-keccak-hash = "0.10.0"
-log = "0.4.17"
+keccak-hash = { workspace = true }
+log = { workspace = true }
 rlp = "0.5.2"
 rlp-derive = "0.1.0"
-serde = "1.0.163"
+serde = { workspace = true }
 serde_json = "1.0.96"
 serde_with = "3.0.0"
-serde_cbor = "0.11.2"
-tokio = { version = "1.28.1", features = ["full"] }
-futures = "0.3.28"
+serde_cbor = { workspace = true }
+tokio = { workspace = true, features = ["full"] }

@@ -5,6 +5,30 @@ members = [
     "common",
 ]
 
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["Polygon Zero <bgluth@polygon.technology>"]
+repository = "https://github.com/0xPolygonZero/evm-tests"
+keywords = ["cryptography", "SNARK", "PLONK", "FRI", "plonky2"]
+categories = ["cryptography"]
+
+[workspace.dependencies]
+anyhow = { version = "1.0.71", features = ["backtrace"] }
+clap = {version = "4.2.7", features = ["derive"] }
+ethereum-types = "0.14.1"
+eth_trie_utils = { git = "https://github.com/0xPolygonZero/eth_trie_utils.git", rev = "7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76" }
+flexi_logger = { version = "0.25.4", features = ["async"] }
+futures = "0.3.28"
+keccak-hash = "0.10.0"
+log = "0.4.17"
+plonky2 = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "b119e96f7f8dee57ebdbc6738e96891d2e628520" }
+plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "b119e96f7f8dee57ebdbc6738e96891d2e628520" }
+serde = "1.0.163"
+serde_cbor = "0.11.2"
+tokio = { version = "1.28.1" }
+
 [profile.release]
+opt-level = 3
 lto = "fat"
 codegen-units = 1
