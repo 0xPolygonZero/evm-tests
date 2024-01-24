@@ -22,8 +22,8 @@ flexi_logger = { version = "0.25.4", features = ["async"] }
 futures = "0.3.28"
 keccak-hash = "0.10.0"
 log = "0.4.17"
-plonky2 = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "b119e96f7f8dee57ebdbc6738e96891d2e628520" }
-plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "b119e96f7f8dee57ebdbc6738e96891d2e628520" }
+plonky2 = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "ca2e56e23bd91859f387ae00c8647ca735efeb0f" }
+plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "ca2e56e23bd91859f387ae00c8647ca735efeb0f" }
 serde = "1.0.163"
 serde_cbor = "0.11.2"
 tokio = { version = "1.28.1" }
