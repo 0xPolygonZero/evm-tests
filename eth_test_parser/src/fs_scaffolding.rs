@@ -133,7 +133,6 @@ fn get_deserialized_test_body(entry: &DirEntry) -> Result<Vec<TestBody>> {
     let tests: Vec<TestBody> = test_file
         .0
         .into_values()
-        .into_iter()
         // This test has an impossible configuration, ans is hence not provable.
         .filter(|t| !t.name.contains("InitCollision_d2g0v0_Shanghai"))
         .collect();
