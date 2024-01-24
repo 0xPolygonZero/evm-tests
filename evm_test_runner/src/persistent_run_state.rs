@@ -1,4 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    fs::File,
+    io::{BufRead, BufReader, Result as IoResult},
+    path::PathBuf,
+};
 
 use chrono::{DateTime, Utc};
 use log::info;
@@ -169,4 +174,9 @@ pub(crate) fn load_existing_pass_state_from_disk_if_exists_or_create() -> TestRu
             info!("No existing test run state found.");
             TestRunEntries::default()
         })
+}
+
+pub(crate) fn load_blacklist(blacklist_file: &PathBuf) -> IoResult<HashSet<String>> {
+    let file = File::open(blacklist_file)?;
+    Ok(BufReader::new(file).lines().flatten().collect())
 }
