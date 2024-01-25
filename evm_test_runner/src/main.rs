@@ -1,13 +1,16 @@
 #![feature(let_chains)]
 
-use std::{rc::Rc, sync::Arc};
+use std::{collections::HashSet, rc::Rc, sync::Arc};
 
+use anyhow::anyhow;
 use arg_parsing::{ProgArgs, ReportType};
 use clap::Parser;
 use common::utils::init_env_logger;
 use futures::executor::block_on;
 use log::info;
-use persistent_run_state::load_existing_pass_state_from_disk_if_exists_or_create;
+use persistent_run_state::{
+    load_blacklist, load_existing_pass_state_from_disk_if_exists_or_create,
+};
 use plonky2_runner::run_plonky2_tests;
 use report_generation::output_test_report_for_terminal;
 use test_dir_reading::{get_default_parsed_tests_path, read_in_all_parsed_tests};
@@ -59,19 +62,42 @@ async fn run() -> anyhow::Result<bool> {
         witness_only,
         test_timeout,
         parsed_tests_path,
+        blacklist_path,
         simple_progress_indicator,
         update_persistent_state_from_upstream,
     } = ProgArgs::parse();
     let mut persistent_test_state = load_existing_pass_state_from_disk_if_exists_or_create();
+
     let filters_used = test_filter.is_some() || variant_filter.is_some();
-    let passed_t_names = skip_passed.then(|| {
-        Arc::new(
-            persistent_test_state
+
+    // Load blacklisted tests if any
+    let blacklisted_t_names = if let Some(path) = blacklist_path {
+        load_blacklist(&path)
+            .map_err(|_| anyhow!("Could not retrieve blacklisted test variants"))?
+    } else {
+        HashSet::new()
+    };
+
+    // `ignored_t_names` contains both previously "passed" tests and "blacklisted"
+    // tests, if the corresponding flags are on.
+    let ignored_t_names: Option<Arc<HashSet<String>>> = match skip_passed {
+        true => {
+            let mut passed_t_names: HashSet<String> = persistent_test_state
                 .get_tests_that_have_passed(witness_only)
                 .map(|t| t.to_string())
-                .collect(),
-        )
-    });
+                .collect();
+            passed_t_names.extend(blacklisted_t_names);
+
+            Some(Arc::new(passed_t_names))
+        }
+        false => {
+            if blacklisted_t_names.is_empty() {
+                None
+            } else {
+                Some(Arc::new(blacklisted_t_names))
+            }
+        }
+    };
 
     let parsed_tests_path = parsed_tests_path
         .map(Ok)
@@ -82,7 +108,7 @@ async fn run() -> anyhow::Result<bool> {
             &parsed_tests_path,
             test_filter.clone(),
             variant_filter,
-            passed_t_names,
+            ignored_t_names,
         )
         .await?,
     );
