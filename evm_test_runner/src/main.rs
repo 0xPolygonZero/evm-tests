@@ -61,7 +61,6 @@ async fn run() -> anyhow::Result<bool> {
         skip_passed,
         witness_only,
         test_timeout,
-        parsed_tests_path,
         blacklist_path,
         simple_progress_indicator,
         update_persistent_state_from_upstream,
@@ -99,9 +98,7 @@ async fn run() -> anyhow::Result<bool> {
         }
     };
 
-    let parsed_tests_path = parsed_tests_path
-        .map(Ok)
-        .unwrap_or_else(get_default_parsed_tests_path)?;
+    let parsed_tests_path = get_default_parsed_tests_path()?;
 
     let parsed_tests = Rc::new(
         read_in_all_parsed_tests(
