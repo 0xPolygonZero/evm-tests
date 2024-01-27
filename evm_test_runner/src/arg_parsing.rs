@@ -18,9 +18,6 @@ pub(crate) enum ReportType {
 #[derive(Debug, Parser)]
 #[clap(author, version, about)]
 pub(crate) struct ProgArgs {
-    /// The path to the parsed tests directory.
-    pub(crate) parsed_tests_path: Option<PathBuf>,
-
     /// An optional path to a blacklist file containing test variants to prevent
     /// from running. This can be used to skip particularly heavy or badly
     /// configured tests.

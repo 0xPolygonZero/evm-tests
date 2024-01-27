@@ -38,8 +38,8 @@ Then launch the runner pointing it at the parsed tests directory:
 
 ```sh
 cd ../evm_test_runner
-cargo run --release -- -r summary ../generation_inputs/BlockchainTests # For a high-level summary report
-cargo run --release -- -r test ../generation_inputs/BlockchainTests # For detailed information per test (likely want to use a filter with `-f`)
+cargo run --release -- -r summary # For a high-level summary report
+cargo run --release -- -r test # For detailed information per test (likely want to use a filter with `-f`)
 ```
 
 The test runner supports secondary arguments to customize the testing flow. While they are all displayed by calling `cargo run -- --help`,
