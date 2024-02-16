@@ -114,7 +114,6 @@ pub struct TestMetadata {
     pub genesis_state_root: H256,
     pub contract_code: HashMap<U256, Vec<u8>>,
     pub block_metadata: BlockMetadata,
-    pub addresses: Vec<Address>,
     pub withdrawals: Vec<(Address, U256)>,
 }
 

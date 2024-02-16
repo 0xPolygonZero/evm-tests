@@ -1,4 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    fs::File,
+    io::{BufRead, BufReader, Result as IoResult},
+    path::PathBuf,
+};
 
 use chrono::{DateTime, Utc};
 use log::info;
@@ -67,13 +72,19 @@ impl TestRunEntries {
         }
     }
 
-    pub(crate) fn get_tests_that_have_passed(&self) -> impl Iterator<Item = &str> {
-        self.0
-            .iter()
-            .filter(|(_name, info)| {
-                matches!(info.pass_state, PassState::Passed | PassState::Ignored)
-            })
-            .map(|(name, _info)| name.as_str())
+    /// Filters previously passed tests if the `skip_passed` argument is used.
+    /// The filtering will always ignore tests for which proof verification was
+    /// successful, but may not skip tests for which only witness generation
+    /// was tested, if we haven't passed the `witness_only` argument.
+    pub(crate) fn get_tests_that_have_passed(
+        &self,
+        witness_only: bool,
+    ) -> impl Iterator<Item = &str> {
+        self.0.iter().filter_map(move |(name, info)| {
+            info.pass_state
+                .get_passed_status(witness_only)
+                .then_some(name.as_str())
+        })
     }
 }
 
@@ -93,17 +104,33 @@ impl From<Vec<SerializableRunEntry>> for TestRunEntries {
 
 #[derive(Copy, Clone, Debug, Deserialize, Default, Serialize)]
 pub(crate) enum PassState {
-    Passed,
+    PassedWitness,
+    PassedProof,
     Ignored,
     Failed,
     #[default]
     NotRun,
 }
 
+impl PassState {
+    // Utility method to filter out passed tests from previous runs.
+    fn get_passed_status(&self, witness_only: bool) -> bool {
+        if witness_only {
+            matches!(
+                self,
+                Self::PassedWitness | Self::PassedProof | Self::Ignored
+            )
+        } else {
+            matches!(self, Self::PassedProof | Self::Ignored)
+        }
+    }
+}
+
 impl From<TestStatus> for PassState {
     fn from(v: TestStatus) -> Self {
         match v {
-            TestStatus::Passed => PassState::Passed,
+            TestStatus::PassedWitness => PassState::PassedWitness,
+            TestStatus::PassedProof => PassState::PassedProof,
             TestStatus::Ignored => PassState::Ignored,
             TestStatus::EvmErr(_) | TestStatus::TimedOut => PassState::Failed,
         }
@@ -147,4 +174,9 @@ pub(crate) fn load_existing_pass_state_from_disk_if_exists_or_create() -> TestRu
             info!("No existing test run state found.");
             TestRunEntries::default()
         })
+}
+
+pub(crate) fn load_blacklist(blacklist_file: &PathBuf) -> IoResult<HashSet<String>> {
+    let file = File::open(blacklist_file)?;
+    Ok(BufReader::new(file).lines().flatten().collect())
 }

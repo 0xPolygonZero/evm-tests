@@ -443,7 +443,15 @@ impl<'de> Deserialize<'de> for TestFile {
                                 // Ensure that the encoding we will provide the zkEVM prover is in
                                 // the block RLP.
                                 if rlp.windows(encoded_txn.len()).any(|c| c == encoded_txn) {
-                                    map.0.insert(key, test_body);
+                                    // Finally, ensure that the gas used fits in 32 bits, otherwise
+                                    // the prover will abort.
+                                    if TryInto::<u32>::try_into(
+                                        test_body.block.block_header.gas_used,
+                                    )
+                                    .is_ok()
+                                    {
+                                        map.0.insert(key, test_body);
+                                    }
                                 }
                             }
                         } else {

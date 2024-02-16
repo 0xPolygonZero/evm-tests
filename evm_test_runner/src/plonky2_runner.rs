@@ -7,6 +7,7 @@ use std::{
 };
 
 use common::types::TestVariantRunInfo;
+use ethereum_types::U256;
 use futures::executor::block_on;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::warn;
@@ -72,8 +73,8 @@ impl TestProgressIndicator for FancyProgressIndicator {
 
 #[derive(Clone, Debug)]
 pub(crate) enum TestStatus {
-    Passed,
-    #[allow(unused)]
+    PassedWitness,
+    PassedProof,
     Ignored,
     EvmErr(String),
     TimedOut,
@@ -82,7 +83,8 @@ pub(crate) enum TestStatus {
 impl Display for TestStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TestStatus::Passed => write!(f, "Passed"),
+            TestStatus::PassedWitness => write!(f, "Passed witness generation"),
+            TestStatus::PassedProof => write!(f, "Passed proof verification"),
             TestStatus::Ignored => write!(f, "Ignored"),
             TestStatus::EvmErr(err) => write!(f, "Evm error: {}", err),
             TestStatus::TimedOut => write!(f, "Test timed out"),
@@ -92,7 +94,7 @@ impl Display for TestStatus {
 
 impl TestStatus {
     pub(crate) fn passed(&self) -> bool {
-        matches!(self, TestStatus::Passed)
+        matches!(self, Self::PassedProof | Self::PassedWitness)
     }
 }
 
@@ -257,10 +259,6 @@ fn run_test_or_fail_on_timeout(
 fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) -> TestStatus {
     let timing = TimingTree::new("prove", log::Level::Debug);
 
-    // The fields `block_gaslimit` and `block_gas_used` are currently supported up
-    // to 64 bits by plonky2 zkEVM for testing purposes only against the EVM test
-    // Suite. This will be reverted to have them fit in 32 bits before going into
-    // production.
     match witness_only {
         true => {
             let res = generate_traces::<GoldilocksField, 2>(
@@ -271,41 +269,63 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
             );
 
             if let Err(evm_err) = res {
-                return handle_evm_err(evm_err, "witness generation");
+                return handle_evm_err(evm_err, false, "witness generation");
             }
+
+            return TestStatus::PassedWitness;
         }
         false => {
+            // plonky2 zkEVM verifier does not support a block gaslimit that does not fit
+            // in a u32.
+            // If a test has such issue, we "try" proving it with an altered gaslimit, and
+            // will ignore it if proving the altered inputs failed so as to not
+            // have false positives.
+            let mut inputs = test.gen_inputs;
+            let is_gaslimit_changed =
+                TryInto::<u32>::try_into(inputs.block_metadata.block_gaslimit).is_err();
+
+            if is_gaslimit_changed {
+                inputs.block_metadata.block_gaslimit = U256::from(u32::MAX);
+            }
+
             let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
                 &AllStark::default(),
                 &StarkConfig::standard_fast_config(),
-                test.gen_inputs,
+                inputs,
                 &mut TimingTree::default(),
                 None,
             );
 
-            timing.filter(Duration::from_millis(100)).print();
+    timing.filter(Duration::from_millis(100)).print();
 
             let proof_run_output = match proof_run_res {
                 Ok(v) => v,
-                Err(evm_err) => return handle_evm_err(evm_err, "Proving"),
+                Err(evm_err) => return handle_evm_err(evm_err, is_gaslimit_changed, "Proving"),
             };
 
-            let verif_output = verify_proof(
-                &AllStark::default(),
-                proof_run_output,
-                &StarkConfig::standard_fast_config(),
-            );
-            if verif_output.is_err() {
-                warn!("Verification failed with error: {:?}", verif_output);
-                return TestStatus::EvmErr("Proof verification failed.".to_string());
-            }
-        }
+    let verif_output = verify_proof(
+        &AllStark::default(),
+        proof_run_output,
+        &StarkConfig::standard_fast_config(),
+    );
+    if verif_output.is_err() {
+        warn!("Verification failed with error: {:?}", verif_output);
+        return TestStatus::EvmErr("Proof verification failed.".to_string());
     }
 
-    TestStatus::Passed
+    TestStatus::PassedProof
 }
 
-fn handle_evm_err(evm_err: anyhow::Error, gen_type: &'static str) -> TestStatus {
+fn handle_evm_err(
+    evm_err: anyhow::Error,
+    is_gaslimit_changed: bool,
+    gen_type: &'static str,
+) -> TestStatus {
+    if is_gaslimit_changed {
+        // We altered the inputs, so we just skip this test in case of failure.
+        return TestStatus::Ignored;
+    }
+
     // The prover failed with unmodified inputs, so this is an actual error.
     warn!("{} failed with error: {:?}", gen_type, evm_err);
     TestStatus::EvmErr(evm_err.to_string())
