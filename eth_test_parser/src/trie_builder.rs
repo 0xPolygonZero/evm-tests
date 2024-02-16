@@ -5,36 +5,31 @@
 //! ```ignore
 //! crate::deserialize::TestBody -> plonky2_evm::generation::GenerationInputs
 //! ```
-use std::borrow::Borrow;
 use std::collections::HashMap;
 
-use smt_utils::account::Account;
-
-use anyhow::Result;
 use common::{
     config::ETHEREUM_CHAIN_ID,
     types::{ExpectedFinalRoots, Plonky2ParsedTest, TestMetadata},
 };
-use eth_trie_utils::{
-    nibbles::Nibbles,
-    partial_trie::{HashedPartialTrie, PartialTrie},
-};
+use eth_trie_utils::partial_trie::HashedPartialTrie;
+use ethereum_types::BigEndianHash;
 use ethereum_types::{Address, H160, H256, U256};
-use keccak_hash::keccak;
 use plonky2_evm::{generation::TrieInputs, proof::BlockMetadata};
-use rlp::Encodable;
 use rlp_derive::{RlpDecodable, RlpEncodable};
-use smt_utils::bits::Bits;
-use smt_utils::smt::{Smt, ValOrHash};
+use smt_utils_hermez::code::hash_bytecode_u256;
+use smt_utils_hermez::db::{Db, MemoryDb};
+use smt_utils_hermez::keys::{key_balance, key_code, key_code_length, key_nonce, key_storage};
+use smt_utils_hermez::smt::Smt;
+use smt_utils_hermez::utils::hashout2u;
 
 use crate::deserialize::{Block, PreAccount, TestBody};
 
 #[derive(RlpDecodable, RlpEncodable)]
 pub(crate) struct AccountRlp {
-    nonce: u64,
+    nonce: U256,
     balance: U256,
-    storage_hash: H256,
-    code_hash: H256,
+    code_hash: U256,
+    code_length: U256,
 }
 
 impl Block {
@@ -65,8 +60,7 @@ impl TestBody {
     pub fn as_plonky2_test_inputs(&self) -> Plonky2ParsedTest {
         let block = &self.block;
 
-        let storage_smts = Self::get_storage_smts(self.pre.iter());
-        let state_smt = Self::get_state_smt(self.pre.iter(), &storage_smts);
+        let state_smt = Self::get_state_smt(self.pre.iter());
 
         let tries = TrieInputs {
             state_smt: state_smt.serialize(),
@@ -77,13 +71,15 @@ impl TestBody {
         let contract_code: HashMap<_, _> = self
             .pre
             .values()
-            .map(|pre| (hash(&pre.code.0), pre.code.0.clone()))
+            .map(|pre| (hash_bytecode_u256(pre.code.0.clone()), pre.code.0.clone()))
             .collect();
+        if self.name.starts_with("InitCollision") {
+            dbg!(&self.name, &contract_code);
+        }
 
         let header = &block.block_header;
 
-        let post_storage_smts = Self::get_storage_smts(self.post.iter());
-        let post_state_smt = Self::get_state_smt(self.post.iter(), &post_storage_smts);
+        let post_state_smt = Self::get_state_smt(self.post.iter());
 
         let addresses = self.pre.keys().copied().collect::<Vec<Address>>();
 
@@ -104,7 +100,7 @@ impl TestBody {
             test_name: self.name.clone(),
             txn_bytes: self.get_txn_bytes(),
             final_roots: ExpectedFinalRoots {
-                state_root_hash: post_state_smt.root,
+                state_root_hash: H256::from_uint(&hashout2u(post_state_smt.root)),
                 txn_trie_root_hash: header.transactions_trie,
                 receipts_trie_root_hash: header.receipt_trie,
             },
@@ -112,45 +108,31 @@ impl TestBody {
         }
     }
 
-    fn get_storage_smts<'a, I>(accounts: I) -> Vec<(H256, Smt)> where I: IntoIterator<Item=(&'a H160, &'a PreAccount)> {
-        accounts
-            .into_iter()
-            .map(|(acc_key, pre_acc)| {
-                let storage_smt = pre_acc
-                    .storage
-                    .iter()
-                    .filter(|(_, v)| !v.is_zero())
-                    .map(|(k, v)| {
-                        (
-                            Bits::from(hash(&u256_to_be_bytes(*k))),
-                            ValOrHash::from(*v)
-                        )
-                    });
-                let storage_smt = Smt::new(storage_smt).unwrap();
+    fn get_state_smt<'a, I>(accounts: I) -> Smt<MemoryDb>
+    where
+        I: IntoIterator<Item = (&'a H160, &'a PreAccount)>,
+    {
+        let mut smt = Smt::<MemoryDb>::default();
+        for (acc_key, pre_acc) in accounts {
+            let code_hash = hash_bytecode_u256(pre_acc.code.0.clone());
+            let storage = pre_acc
+                .storage
+                .iter()
+                .filter(|(_, v)| !v.is_zero())
+                .map(|(k, v)| (*k, *v))
+                .collect();
 
-                (hash(acc_key.as_bytes()), storage_smt)
-            })
-            .collect()
-    }
+            let account = AccountRlp {
+                nonce: pre_acc.nonce.into(),
+                balance: pre_acc.balance,
+                code_hash,
+                code_length: pre_acc.code.0.len().into(),
+            };
 
-    fn get_state_smt<'a, I>(accounts: I, storage_tries: &[(H256, Smt)]) -> Smt where I: IntoIterator<Item=(&'a H160, &'a PreAccount)>  {
-        let accs = accounts
-            .into_iter()
-            .map(|(acc_key, pre_acc)| {
-                let addr_hash = hash(acc_key.as_bytes());
-                let code_hash = hash(&pre_acc.code.0);
-                let storage_smt = get_storage_hash(&addr_hash, storage_tries);
+            set_account(&mut smt, *acc_key, &account, &storage);
+        }
 
-                let account = Account {
-                    nonce: pre_acc.nonce,
-                    balance: pre_acc.balance,
-                    code_hash,
-                    storage_smt,
-                };
-
-                (addr_hash.into(), account.into())
-            });
-        Smt::new(accs).unwrap()
+        smt
     }
 
     pub(crate) fn get_txn_bytes(&self) -> Vec<u8> {
@@ -165,23 +147,17 @@ impl From<TestBody> for Plonky2ParsedTest {
     }
 }
 
-fn get_storage_hash(
-    hashed_account_address: &H256,
-    storage_tries: &[(H256, Smt)],
-) -> Smt {
-    storage_tries
-        .iter()
-        .find(|(addr, _)| hashed_account_address == addr)
-        .unwrap()
-        .1.clone()
-}
-
-fn u256_to_be_bytes(x: U256) -> [u8; 32] {
-    let mut bytes = [0; 32];
-    x.to_big_endian(&mut bytes);
-    bytes
-}
-
-fn hash(bytes: &[u8]) -> H256 {
-    H256::from(keccak(bytes).0)
+fn set_account<D: Db>(
+    smt: &mut Smt<D>,
+    addr: Address,
+    account: &AccountRlp,
+    storage: &HashMap<U256, U256>,
+) {
+    smt.set(key_balance(addr), account.balance);
+    smt.set(key_nonce(addr), account.nonce);
+    smt.set(key_code(addr), account.code_hash);
+    smt.set(key_code_length(addr), account.code_length);
+    for (&k, &v) in storage {
+        smt.set(key_storage(addr, k), v);
+    }
 }

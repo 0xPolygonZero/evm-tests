@@ -650,14 +650,14 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "serde_with",
- "smt_utils",
+ "smt_utils_hermez 0.1.0",
  "tokio",
 ]
 
 [[package]]
 name = "eth_trie_utils"
 version = "0.6.0"
-source = "git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5#e9ec4ec2aa2ae976b7c699ef40c1ffc716d87ed5"
+source = "git+https://github.com/0xPolygonZero/eth_trie_utils.git?rev=7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76#7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76"
 dependencies = [
  "bytes",
  "enum-as-inner",
@@ -719,7 +719,7 @@ dependencies = [
  "indicatif",
  "keccak-hash 0.10.0",
  "log",
- "plonky2",
+ "plonky2 0.1.4",
  "plonky2_evm",
  "serde",
  "serde_cbor",
@@ -1528,7 +1528,6 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 [[package]]
 name = "plonky2"
 version = "0.1.4"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/testing#106610a14df6969d61603db46618e96d1dc8cbf9"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1538,21 +1537,46 @@ dependencies = [
  "keccak-hash 0.8.0",
  "log",
  "num",
- "plonky2_field",
- "plonky2_maybe_rayon",
- "plonky2_util",
+ "plonky2_field 0.1.1",
+ "plonky2_maybe_rayon 0.1.1",
+ "plonky2_util 0.1.1",
  "rand",
  "rand_chacha",
  "serde",
  "serde_json",
  "static_assertions",
  "unroll",
+ "web-time",
+]
+
+[[package]]
+name = "plonky2"
+version = "0.1.4"
+source = "git+https://github.com/0xPolygonZero/plonky2?rev=d2598bded0cb24d36b0a9900e8ffd104c470831b#d2598bded0cb24d36b0a9900e8ffd104c470831b"
+dependencies = [
+ "ahash",
+ "anyhow",
+ "getrandom",
+ "hashbrown 0.14.0",
+ "itertools",
+ "keccak-hash 0.8.0",
+ "log",
+ "num",
+ "plonky2_field 0.1.1 (git+https://github.com/0xPolygonZero/plonky2?rev=d2598bded0cb24d36b0a9900e8ffd104c470831b)",
+ "plonky2_maybe_rayon 0.1.1 (git+https://github.com/0xPolygonZero/plonky2?rev=d2598bded0cb24d36b0a9900e8ffd104c470831b)",
+ "plonky2_util 0.1.1 (git+https://github.com/0xPolygonZero/plonky2?rev=d2598bded0cb24d36b0a9900e8ffd104c470831b)",
+ "rand",
+ "rand_chacha",
+ "serde",
+ "serde_json",
+ "static_assertions",
+ "unroll",
+ "web-time",
 ]
 
 [[package]]
 name = "plonky2_evm"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/testing#106610a14df6969d61603db46618e96d1dc8cbf9"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1570,16 +1594,16 @@ dependencies = [
  "once_cell",
  "pest",
  "pest_derive",
- "plonky2",
- "plonky2_maybe_rayon",
- "plonky2_util",
+ "plonky2 0.1.4",
+ "plonky2_maybe_rayon 0.1.1",
+ "plonky2_util 0.1.1",
  "rand",
  "rand_chacha",
  "rlp",
  "rlp-derive",
  "serde",
  "serde_json",
- "smt_utils",
+ "smt_utils_hermez 0.1.0 (git+https://github.com/wborgeaud/smt-utils-hermez?rev=17e94ea51f740331821c471810108ce16bd9bc9a)",
  "static_assertions",
  "tiny-keccak",
 ]
@@ -1587,12 +1611,26 @@ dependencies = [
 [[package]]
 name = "plonky2_field"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/testing#106610a14df6969d61603db46618e96d1dc8cbf9"
 dependencies = [
  "anyhow",
  "itertools",
  "num",
- "plonky2_util",
+ "plonky2_util 0.1.1",
+ "rand",
+ "serde",
+ "static_assertions",
+ "unroll",
+]
+
+[[package]]
+name = "plonky2_field"
+version = "0.1.1"
+source = "git+https://github.com/0xPolygonZero/plonky2?rev=d2598bded0cb24d36b0a9900e8ffd104c470831b#d2598bded0cb24d36b0a9900e8ffd104c470831b"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "num",
+ "plonky2_util 0.1.1 (git+https://github.com/0xPolygonZero/plonky2?rev=d2598bded0cb24d36b0a9900e8ffd104c470831b)",
  "rand",
  "serde",
  "static_assertions",
@@ -1602,7 +1640,14 @@ dependencies = [
 [[package]]
 name = "plonky2_maybe_rayon"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/testing#106610a14df6969d61603db46618e96d1dc8cbf9"
+dependencies = [
+ "rayon",
+]
+
+[[package]]
+name = "plonky2_maybe_rayon"
+version = "0.1.1"
+source = "git+https://github.com/0xPolygonZero/plonky2?rev=d2598bded0cb24d36b0a9900e8ffd104c470831b#d2598bded0cb24d36b0a9900e8ffd104c470831b"
 dependencies = [
  "rayon",
 ]
@@ -1610,7 +1655,11 @@ dependencies = [
 [[package]]
 name = "plonky2_util"
 version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/testing#106610a14df6969d61603db46618e96d1dc8cbf9"
+
+[[package]]
+name = "plonky2_util"
+version = "0.1.1"
+source = "git+https://github.com/0xPolygonZero/plonky2?rev=d2598bded0cb24d36b0a9900e8ffd104c470831b#d2598bded0cb24d36b0a9900e8ffd104c470831b"
 
 [[package]]
 name = "portable-atomic"
@@ -1965,18 +2014,41 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
-name = "smt_utils"
+name = "smt_utils_hermez"
 version = "0.1.0"
-source = "git+https://github.com/0xPolygonZero/smt_utils.git#3a1ac78897930fb1b4842ed94e205e7e606e416a"
 dependencies = [
  "bytes",
  "enum-as-inner",
  "ethereum-types",
  "hex",
+ "hex-literal",
  "keccak-hash 0.10.0",
  "log",
  "num-traits",
  "parking_lot",
+ "plonky2 0.1.4 (git+https://github.com/0xPolygonZero/plonky2?rev=d2598bded0cb24d36b0a9900e8ffd104c470831b)",
+ "rand",
+ "rlp",
+ "serde",
+ "thiserror",
+ "uint",
+]
+
+[[package]]
+name = "smt_utils_hermez"
+version = "0.1.0"
+source = "git+https://github.com/wborgeaud/smt-utils-hermez?rev=17e94ea51f740331821c471810108ce16bd9bc9a#17e94ea51f740331821c471810108ce16bd9bc9a"
+dependencies = [
+ "bytes",
+ "enum-as-inner",
+ "ethereum-types",
+ "hex",
+ "hex-literal",
+ "keccak-hash 0.10.0",
+ "log",
+ "num-traits",
+ "parking_lot",
+ "plonky2 0.1.4 (git+https://github.com/0xPolygonZero/plonky2?rev=d2598bded0cb24d36b0a9900e8ffd104c470831b)",
  "rand",
  "rlp",
  "serde",
@@ -2314,6 +2386,16 @@ name = "wasm-bindgen-shared"
 version = "0.2.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed9d5b4305409d1fc9482fee2d7f9bcbf24b3972bf59817ef757e23982242a93"
+
+[[package]]
+name = "web-time"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ee269d72cc29bf77a2c4bc689cc750fb39f5cbd493d2205bbb3f5c7779cf7b0"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+]
 
 [[package]]
 name = "winapi"

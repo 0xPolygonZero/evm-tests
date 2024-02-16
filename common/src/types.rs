@@ -46,18 +46,15 @@ impl ParsedTestManifest {
                     receipts_root: t_var.final_roots.receipts_trie_root_hash,
                 };
                 let gen_inputs = GenerationInputs {
-                    signed_txns: vec![t_var.txn_bytes],
+                    signed_txn: Some(t_var.txn_bytes),
                     tries: t_var.plonky2_metadata.tries.clone(),
                     trie_roots_after,
-                    genesis_state_trie_root: t_var.plonky2_metadata.genesis_state_root,
+                    checkpoint_state_trie_root: t_var.plonky2_metadata.genesis_state_root,
                     contract_code: t_var.plonky2_metadata.contract_code.clone(),
                     block_metadata: t_var.plonky2_metadata.block_metadata.clone(),
-                    addresses: t_var.plonky2_metadata.addresses.clone(),
                     txn_number_before: U256::zero(),
                     gas_used_before: U256::zero(),
-                    block_bloom_before: [U256::zero(); 8],
                     gas_used_after: t_var.plonky2_metadata.block_metadata.block_gas_used,
-                    block_bloom_after: t_var.plonky2_metadata.block_metadata.block_bloom,
                     withdrawals: t_var.plonky2_metadata.withdrawals,
                     block_hashes: BlockHashes::default(),
                 };
@@ -115,7 +112,7 @@ pub struct ExpectedFinalRoots {
 pub struct TestMetadata {
     pub tries: TrieInputs,
     pub genesis_state_root: H256,
-    pub contract_code: HashMap<H256, Vec<u8>>,
+    pub contract_code: HashMap<U256, Vec<u8>>,
     pub block_metadata: BlockMetadata,
     pub addresses: Vec<Address>,
     pub withdrawals: Vec<(Address, U256)>,

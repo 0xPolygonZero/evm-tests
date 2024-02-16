@@ -280,6 +280,7 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
                 &StarkConfig::standard_fast_config(),
                 test.gen_inputs,
                 &mut TimingTree::default(),
+                None
             );
 
             timing.filter(Duration::from_millis(100)).print();
@@ -301,6 +302,7 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
         }
     }
 
+    println!("Passed");
     TestStatus::Passed
 }
 

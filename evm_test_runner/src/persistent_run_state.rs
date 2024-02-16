@@ -68,9 +68,12 @@ impl TestRunEntries {
     }
 
     pub(crate) fn get_tests_that_have_passed(&self) -> impl Iterator<Item = &str> {
-        self.0.iter().filter_map(|(name, info)| {
-            matches!(info.pass_state, PassState::Passed | PassState::Ignored).then(|| name.as_str())
-        })
+        self.0
+            .iter()
+            .filter(|(_name, info)| {
+                matches!(info.pass_state, PassState::Passed | PassState::Ignored)
+            })
+            .map(|(name, _info)| name.as_str())
     }
 }
 
