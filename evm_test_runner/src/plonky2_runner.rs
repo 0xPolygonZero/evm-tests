@@ -296,24 +296,26 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
                 None,
             );
 
-    timing.filter(Duration::from_millis(100)).print();
+            timing.filter(Duration::from_millis(100)).print();
 
             let proof_run_output = match proof_run_res {
                 Ok(v) => v,
                 Err(evm_err) => return handle_evm_err(evm_err, is_gaslimit_changed, "Proving"),
             };
 
-    let verif_output = verify_proof(
-        &AllStark::default(),
-        proof_run_output,
-        &StarkConfig::standard_fast_config(),
-    );
-    if verif_output.is_err() {
-        warn!("Verification failed with error: {:?}", verif_output);
-        return TestStatus::EvmErr("Proof verification failed.".to_string());
-    }
+            let verif_output = verify_proof(
+                &AllStark::default(),
+                proof_run_output,
+                &StarkConfig::standard_fast_config(),
+            );
+            if verif_output.is_err() {
+                warn!("Verification failed with error: {:?}", verif_output);
+                return TestStatus::EvmErr("Proof verification failed.".to_string());
+            }
 
-    TestStatus::PassedProof
+            TestStatus::PassedProof
+        }
+    }
 }
 
 fn handle_evm_err(

@@ -78,14 +78,11 @@ impl TestBody {
 
         let post_state_smt = Self::get_state_smt(self.post.iter());
 
-        let addresses = self.pre.keys().copied().collect::<Vec<Address>>();
-
         let plonky2_metadata = TestMetadata {
             tries,
             contract_code,
             genesis_state_root: self.genesis_block.block_header.state_root,
             block_metadata: self.block.block_metadata(),
-            addresses,
             withdrawals: block
                 .withdrawals
                 .iter()
