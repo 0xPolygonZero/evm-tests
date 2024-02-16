@@ -11,7 +11,7 @@ edition = "2021"
 common = { path = "../common" }
 eth_trie_utils = { git = "https://github.com/0xPolygonZero/eth_trie_utils.git", rev = "7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76" }
 # smt_utils = { git = "https://github.com/0xPolygonZero/smt_utils.git" }
-smt_utils_hermez = { path = "https://github.com/0xPolygonZero/smt_utils.git" }
+smt_utils_hermez = { git = "https://github.com/wborgeaud/smt-utils-hermez.git" }
 #smt_utils_hermez = { path = "../../smt_utils_hermez" }
 plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", branch = "type2/hermez" }
 #plonky2_evm = { path = "../../plonky2/evm" }
