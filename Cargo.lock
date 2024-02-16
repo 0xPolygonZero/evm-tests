@@ -650,7 +650,7 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "serde_with",
- "smt_utils_hermez 0.1.0",
+ "smt_utils_hermez 0.1.0 (git+https://github.com/wborgeaud/smt-utils-hermez.git)",
  "tokio",
 ]
 
@@ -719,7 +719,7 @@ dependencies = [
  "indicatif",
  "keccak-hash 0.10.0",
  "log",
- "plonky2 0.1.4",
+ "plonky2 0.1.4 (git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez)",
  "plonky2_evm",
  "serde",
  "serde_cbor",
@@ -1528,6 +1528,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 [[package]]
 name = "plonky2"
 version = "0.1.4"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez#be7c9a84e07ba00521e12901d66737fbfa6eef11"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1537,9 +1538,9 @@ dependencies = [
  "keccak-hash 0.8.0",
  "log",
  "num",
- "plonky2_field 0.1.1",
- "plonky2_maybe_rayon 0.1.1",
- "plonky2_util 0.1.1",
+ "plonky2_field 0.1.1 (git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez)",
+ "plonky2_maybe_rayon 0.1.1 (git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez)",
+ "plonky2_util 0.1.1 (git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez)",
  "rand",
  "rand_chacha",
  "serde",
@@ -1577,6 +1578,7 @@ dependencies = [
 [[package]]
 name = "plonky2_evm"
 version = "0.1.1"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez#be7c9a84e07ba00521e12901d66737fbfa6eef11"
 dependencies = [
  "anyhow",
  "bytes",
@@ -1594,9 +1596,9 @@ dependencies = [
  "once_cell",
  "pest",
  "pest_derive",
- "plonky2 0.1.4",
- "plonky2_maybe_rayon 0.1.1",
- "plonky2_util 0.1.1",
+ "plonky2 0.1.4 (git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez)",
+ "plonky2_maybe_rayon 0.1.1 (git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez)",
+ "plonky2_util 0.1.1 (git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez)",
  "rand",
  "rand_chacha",
  "rlp",
@@ -1611,11 +1613,12 @@ dependencies = [
 [[package]]
 name = "plonky2_field"
 version = "0.1.1"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez#be7c9a84e07ba00521e12901d66737fbfa6eef11"
 dependencies = [
  "anyhow",
  "itertools",
  "num",
- "plonky2_util 0.1.1",
+ "plonky2_util 0.1.1 (git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez)",
  "rand",
  "serde",
  "static_assertions",
@@ -1640,6 +1643,7 @@ dependencies = [
 [[package]]
 name = "plonky2_maybe_rayon"
 version = "0.1.1"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez#be7c9a84e07ba00521e12901d66737fbfa6eef11"
 dependencies = [
  "rayon",
 ]
@@ -1655,6 +1659,7 @@ dependencies = [
 [[package]]
 name = "plonky2_util"
 version = "0.1.1"
+source = "git+https://github.com/0xPolygonZero/plonky2.git?branch=type2/hermez#be7c9a84e07ba00521e12901d66737fbfa6eef11"
 
 [[package]]
 name = "plonky2_util"
@@ -2016,6 +2021,7 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 [[package]]
 name = "smt_utils_hermez"
 version = "0.1.0"
+source = "git+https://github.com/wborgeaud/smt-utils-hermez?rev=17e94ea51f740331821c471810108ce16bd9bc9a#17e94ea51f740331821c471810108ce16bd9bc9a"
 dependencies = [
  "bytes",
  "enum-as-inner",
@@ -2037,7 +2043,7 @@ dependencies = [
 [[package]]
 name = "smt_utils_hermez"
 version = "0.1.0"
-source = "git+https://github.com/wborgeaud/smt-utils-hermez?rev=17e94ea51f740331821c471810108ce16bd9bc9a#17e94ea51f740331821c471810108ce16bd9bc9a"
+source = "git+https://github.com/wborgeaud/smt-utils-hermez.git#17e94ea51f740331821c471810108ce16bd9bc9a"
 dependencies = [
  "bytes",
  "enum-as-inner",

@@ -73,9 +73,6 @@ impl TestBody {
             .values()
             .map(|pre| (hash_bytecode_u256(pre.code.0.clone()), pre.code.0.clone()))
             .collect();
-        if self.name.starts_with("InitCollision") {
-            dbg!(&self.name, &contract_code);
-        }
 
         let header = &block.block_header;
 
