@@ -14,7 +14,7 @@ categories.workspace = true
 [dependencies]
 common = { path = "../common" }
 plonky2 = { workspace = true }
-plonky2_evm = { workspace = true }
+evm_arithmetization = { workspace = true }
 
 anyhow = { workspace = true }
 askama = "0.12.0"

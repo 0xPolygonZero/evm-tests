@@ -6,8 +6,8 @@ use std::{
 
 use anyhow::{anyhow, Context};
 use ethereum_types::{Address, H256, U256};
-use plonky2_evm::proof::{BlockHashes, TrieRoots};
-use plonky2_evm::{
+use evm_arithmetization::proof::{BlockHashes, TrieRoots};
+use evm_arithmetization::{
     generation::{GenerationInputs, TrieInputs},
     proof::BlockMetadata,
 };
