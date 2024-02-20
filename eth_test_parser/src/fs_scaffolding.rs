@@ -130,12 +130,7 @@ fn get_deserialized_test_body(entry: &DirEntry) -> Result<Vec<TestBody>> {
     let buf = BufReader::new(File::open(entry.path())?);
     let test_file: TestFile = serde_json::from_reader(buf)?;
 
-    let tests: Vec<TestBody> = test_file
-        .0
-        .into_values()
-        // This test has an impossible configuration, ans is hence not provable.
-        .filter(|t| !t.name.contains("InitCollision_d2g0v0_Shanghai"))
-        .collect();
+    let tests: Vec<TestBody> = test_file.0.into_values().collect();
     if tests.is_empty() {
         Err(anyhow!("No valid tests found"))
     } else {

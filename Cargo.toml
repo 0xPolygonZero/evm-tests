@@ -17,13 +17,13 @@ categories = ["cryptography"]
 anyhow = { version = "1.0.71", features = ["backtrace"] }
 clap = {version = "4.2.7", features = ["derive"] }
 ethereum-types = "0.14.1"
-eth_trie_utils = { git = "https://github.com/0xPolygonZero/eth_trie_utils.git", rev = "7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76" }
+mpt_trie = { git = "https://github.com/0xPolygonZero/zk_evm.git", rev = "62b6f5a8fd11cfc74d32f8d598d395a46f148502" }
 flexi_logger = { version = "0.25.4", features = ["async"] }
 futures = "0.3.28"
 keccak-hash = "0.10.0"
 log = "0.4.17"
-plonky2 = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "ca2e56e23bd91859f387ae00c8647ca735efeb0f" }
-plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "ca2e56e23bd91859f387ae00c8647ca735efeb0f" }
+plonky2 = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "710225c9e0ac5822b2965ce74951cf000bbb8a2c" }
+evm_arithmetization = { git = "https://github.com/0xPolygonZero/zk_evm.git", rev = "62b6f5a8fd11cfc74d32f8d598d395a46f148502" }
 serde = "1.0.163"
 serde_cbor = "0.11.2"
 tokio = { version = "1.28.1" }

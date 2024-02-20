@@ -3,7 +3,7 @@
 //!
 //! In other words
 //! ```ignore
-//! crate::deserialize::TestBody -> plonky2_evm::generation::GenerationInputs
+//! crate::deserialize::TestBody -> evm_arithmetization::generation::GenerationInputs
 //! ```
 use std::collections::HashMap;
 
@@ -12,13 +12,13 @@ use common::{
     config::ETHEREUM_CHAIN_ID,
     types::{ExpectedFinalRoots, Plonky2ParsedTest, TestMetadata},
 };
-use eth_trie_utils::{
+use ethereum_types::{H256, U256};
+use evm_arithmetization::{generation::TrieInputs, proof::BlockMetadata};
+use keccak_hash::keccak;
+use mpt_trie::{
     nibbles::Nibbles,
     partial_trie::{HashedPartialTrie, PartialTrie},
 };
-use ethereum_types::{H256, U256};
-use keccak_hash::keccak;
-use plonky2_evm::{generation::TrieInputs, proof::BlockMetadata};
 use rlp::Encodable;
 use rlp_derive::{RlpDecodable, RlpEncodable};
 

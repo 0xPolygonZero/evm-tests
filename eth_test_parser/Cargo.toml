@@ -13,8 +13,8 @@ categories.workspace = true
 
 [dependencies]
 common = { path = "../common" }
-eth_trie_utils = { workspace = true }
-plonky2_evm = { workspace = true }
+mpt_trie = { workspace = true }
+evm_arithmetization = { workspace = true }
 
 anyhow = { workspace = true }
 bytes = "1.4.0"

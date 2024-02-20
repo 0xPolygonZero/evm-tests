@@ -8,16 +8,15 @@ use std::{
 
 use common::types::TestVariantRunInfo;
 use ethereum_types::U256;
+use evm_arithmetization::{
+    generation::generate_traces, prover::prove, verifier::verify_proof, AllStark, StarkConfig,
+};
 use futures::executor::block_on;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::warn;
 use plonky2::{
     field::goldilocks_field::GoldilocksField, plonk::config::KeccakGoldilocksConfig,
     util::timing::TimingTree,
-};
-use plonky2_evm::{
-    all_stark::AllStark, config::StarkConfig, generation::generate_traces, prover::prove,
-    verifier::verify_proof,
 };
 use tokio::{select, time::timeout};
 

@@ -3,11 +3,11 @@ use std::{collections::HashMap, marker::PhantomData};
 use anyhow::Result;
 use bytes::Bytes;
 use ethereum_types::{Address, H160, H256, U256};
-use hex::FromHex;
-use plonky2_evm::generation::mpt::transaction_testing::{
+use evm_arithmetization::generation::mpt::transaction_testing::{
     AccessListItemRlp, AccessListTransactionRlp, AddressOption, FeeMarketTransactionRlp,
     LegacyTransactionRlp,
 };
+use hex::FromHex;
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
 use rlp_derive::RlpDecodable;
 use serde::de::MapAccess;
