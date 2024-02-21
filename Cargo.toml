@@ -27,8 +27,8 @@ tokio = { version = "1.28.1" }
 
 # zk-evm dependencies
 plonky2 = "0.2.0"
-mpt_trie = "0.1.1"
-evm_arithmetization = "0.1.1"
+mpt_trie = { git = "https://github.com/0xPolygonZero/zk_evm", branch = "feat/cancun" }
+evm_arithmetization = { git = "https://github.com/0xPolygonZero/zk_evm", branch = "feat/cancun" }
 
 [profile.release]
 opt-level = 3

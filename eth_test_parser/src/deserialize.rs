@@ -4,8 +4,8 @@ use anyhow::Result;
 use bytes::Bytes;
 use ethereum_types::{Address, H160, H256, U256};
 use evm_arithmetization::generation::mpt::transaction_testing::{
-    AccessListItemRlp, AccessListTransactionRlp, AddressOption, FeeMarketTransactionRlp,
-    LegacyTransactionRlp,
+    AccessListItemRlp, AccessListTransactionRlp, AddressOption, BlobTransactionRlp,
+    FeeMarketTransactionRlp, LegacyTransactionRlp,
 };
 use hex::FromHex;
 use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
@@ -103,6 +103,9 @@ pub(crate) struct BlockHeader {
     pub(crate) _nonce: Vec<u8>,
     pub(crate) base_fee_per_gas: U256,
     pub(crate) _withdrawals_root: FieldOption<H256>,
+    pub(crate) blob_gas_used: U256,
+    pub(crate) excess_blob_gas: U256,
+    pub(crate) parent_beacon_block_root: H256,
 }
 
 // Some tests store the access list in a way that doesn't respect the specs,
@@ -239,11 +242,57 @@ impl CustomFeeMarketTransactionRlp {
     }
 }
 
+// A custom type-2 txn to handle some edge-cases with the access_list field.
+#[derive(RlpDecodable, Debug, Clone)]
+pub struct CustomBlobTransactionRlp {
+    pub chain_id: u64,
+    pub nonce: U256,
+    pub max_priority_fee_per_gas: U256,
+    pub max_fee_per_gas: U256,
+    pub gas: U256,
+    pub to: H160,
+    pub value: U256,
+    pub data: Bytes,
+    pub access_list: Vec<AccessItemRlp>,
+    pub max_fee_per_blob_gas: U256,
+    pub blob_versioned_hashes: Vec<H256>,
+    pub y_parity: U256,
+    pub r: U256,
+    pub s: U256,
+}
+
+impl CustomBlobTransactionRlp {
+    fn into_regular(self) -> BlobTransactionRlp {
+        BlobTransactionRlp {
+            chain_id: self.chain_id,
+            nonce: self.nonce,
+            max_priority_fee_per_gas: self.max_priority_fee_per_gas,
+            max_fee_per_gas: self.max_fee_per_gas,
+            gas: self.gas,
+            to: self.to,
+            value: self.value,
+            data: self.data.clone(),
+            access_list: self
+                .access_list
+                .clone()
+                .into_iter()
+                .map(|x| x.into_regular())
+                .collect(),
+            max_fee_per_blob_gas: self.max_fee_per_blob_gas,
+            blob_versioned_hashes: self.blob_versioned_hashes,
+            y_parity: self.y_parity,
+            r: self.r,
+            s: self.s,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum Transaction {
     Legacy(LegacyTransactionRlp),
     AccessList(AccessListTransactionRlp),
     FeeMarket(FeeMarketTransactionRlp),
+    Blob(BlobTransactionRlp),
 }
 
 impl Transaction {
@@ -254,6 +303,8 @@ impl Transaction {
                 .map(|tx| Transaction::AccessList(tx.into_regular())),
             2 => CustomFeeMarketTransactionRlp::decode(&Rlp::new(&bytes[1..]))
                 .map(|tx| Transaction::FeeMarket(tx.into_regular())),
+            3 => CustomBlobTransactionRlp::decode(&Rlp::new(&bytes[1..]))
+                .map(|tx| Transaction::Blob(tx.into_regular())),
             _ => LegacyTransactionRlp::decode(&Rlp::new(bytes)).map(Transaction::Legacy),
         }
     }
@@ -271,6 +322,10 @@ impl Encodable for Transaction {
                 s.encoder().encode_value(&[0x02]);
                 s.append(tx)
             }
+            Transaction::Blob(tx) => {
+                s.encoder().encode_value(&[0x03]);
+                s.append(tx)
+            }
         };
     }
 }
@@ -283,6 +338,8 @@ impl Decodable for Transaction {
                 .map(|tx| Transaction::AccessList(tx.into_regular())),
             2 => CustomFeeMarketTransactionRlp::decode(&Rlp::new(&rlp.as_raw()[1..]))
                 .map(|tx| Transaction::FeeMarket(tx.into_regular())),
+            3 => CustomBlobTransactionRlp::decode(&Rlp::new(&rlp.as_raw()[1..]))
+                .map(|tx| Transaction::Blob(tx.into_regular())),
             _ => LegacyTransactionRlp::decode(rlp).map(Transaction::Legacy),
         };
 
@@ -388,7 +445,7 @@ struct ValueJson {
 }
 
 // Wrapper around a regular `HashMap` used to conveniently skip
-// non-Shanghai related tests when deserializing.
+// non-Cancun related tests when deserializing.
 #[derive(Default, Debug)]
 pub(crate) struct TestFile(pub(crate) HashMap<String, TestBody>);
 
@@ -423,9 +480,9 @@ impl<'de> Deserialize<'de> for TestFile {
                 let mut map = TestFile(HashMap::with_capacity(access.size_hint().unwrap_or(0)));
 
                 // While we are parsing many values, we only care about the ones containing
-                // `Shanghai` in their key name.
+                // `Cancun` in their key name.
                 while let Some((key, value)) = access.next_entry::<String, ValueJson>()? {
-                    if key.contains("Shanghai") {
+                    if key.contains("_Cancun") {
                         if value.blocks[0].transaction_sequence.is_none() {
                             let test_body = TestBody::from_parsed_json(&value, key.clone());
 
