@@ -682,13 +682,14 @@ dependencies = [
 [[package]]
 name = "evm_arithmetization"
 version = "0.1.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm.git?rev=62b6f5a8fd11cfc74d32f8d598d395a46f148502#62b6f5a8fd11cfc74d32f8d598d395a46f148502"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d80801ec98b39dde6182d34f76f11abe050302f36d8847bfcd4456ecd990c9b"
 dependencies = [
  "anyhow",
  "bytes",
  "env_logger",
  "ethereum-types",
- "hashbrown 0.14.0",
+ "hashbrown 0.14.3",
  "hex-literal",
  "itertools",
  "jemallocator",
@@ -932,9 +933,9 @@ checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 
 [[package]]
 name = "hashbrown"
-version = "0.14.0"
+version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c6201b9ff9fd90a5a3bac2e56a830d0caa509576f0e503818ee82c181b3437a"
+checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 dependencies = [
  "ahash",
  "allocator-api2",
@@ -1281,7 +1282,8 @@ dependencies = [
 [[package]]
 name = "mpt_trie"
 version = "0.1.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm.git?rev=62b6f5a8fd11cfc74d32f8d598d395a46f148502#62b6f5a8fd11cfc74d32f8d598d395a46f148502"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cc408af26fe8f58787fb1be1a3bbfdd041bc36a15d4075fdadde07028469381"
 dependencies = [
  "bytes",
  "enum-as-inner",
@@ -1558,13 +1560,14 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "plonky2"
-version = "0.1.4"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=710225c9e0ac5822b2965ce74951cf000bbb8a2c#710225c9e0ac5822b2965ce74951cf000bbb8a2c"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b25deb9a4b9c2014c2f99cd36078f30e453d188d0ca8dd4c5ffd1d494b661ac1"
 dependencies = [
  "ahash",
  "anyhow",
  "getrandom",
- "hashbrown 0.14.0",
+ "hashbrown 0.14.3",
  "itertools",
  "keccak-hash 0.8.0",
  "log",
@@ -1575,7 +1578,6 @@ dependencies = [
  "rand",
  "rand_chacha",
  "serde",
- "serde_json",
  "static_assertions",
  "unroll",
  "web-time",
@@ -1583,8 +1585,9 @@ dependencies = [
 
 [[package]]
 name = "plonky2_field"
-version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=710225c9e0ac5822b2965ce74951cf000bbb8a2c#710225c9e0ac5822b2965ce74951cf000bbb8a2c"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "465a741ba134485af571152aab5086457a470aa8893391186cf78dd389694440"
 dependencies = [
  "anyhow",
  "itertools",
@@ -1598,16 +1601,18 @@ dependencies = [
 
 [[package]]
 name = "plonky2_maybe_rayon"
-version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=710225c9e0ac5822b2965ce74951cf000bbb8a2c#710225c9e0ac5822b2965ce74951cf000bbb8a2c"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92ff44a90aaca13e10e7ddf8fab815ba1b404c3f7c3ca82aaf11c46beabaa923"
 dependencies = [
  "rayon",
 ]
 
 [[package]]
 name = "plonky2_util"
-version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=710225c9e0ac5822b2965ce74951cf000bbb8a2c#710225c9e0ac5822b2965ce74951cf000bbb8a2c"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b16136f5f3019c1e83035af76cccddd56d789a5e2933306270185c3f99f12259"
 
 [[package]]
 name = "portable-atomic"
@@ -1967,12 +1972,13 @@ dependencies = [
 
 [[package]]
 name = "starky"
-version = "0.1.2"
-source = "git+https://github.com/0xPolygonZero/plonky2.git?rev=710225c9e0ac5822b2965ce74951cf000bbb8a2c#710225c9e0ac5822b2965ce74951cf000bbb8a2c"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2edb3b04ef3bb95f31805b9c88a9de39767089adadc1966ddc3c43348a11464a"
 dependencies = [
  "ahash",
  "anyhow",
- "hashbrown 0.14.0",
+ "hashbrown 0.14.3",
  "itertools",
  "log",
  "num-bigint",
