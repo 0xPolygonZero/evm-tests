@@ -153,7 +153,7 @@ impl PassedInfo {
     }
 }
 
-///
+/// Print the test report to the terminal.
 pub(crate) fn output_test_report_for_terminal(
     res: &[TestGroupRunResults],
     test_filter_str: Option<String>,
