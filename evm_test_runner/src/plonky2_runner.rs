@@ -9,7 +9,9 @@ use std::{
 use common::types::TestVariantRunInfo;
 use ethereum_types::U256;
 use evm_arithmetization::{
-    generation::generate_traces, prover::prove, verifier::verify_proof, AllStark, StarkConfig,
+    prover::{prove, testing::simulate_execution},
+    verifier::verify_proof,
+    AllStark, StarkConfig,
 };
 use futures::executor::block_on;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -260,12 +262,7 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
 
     match witness_only {
         true => {
-            let res = generate_traces::<GoldilocksField, 2>(
-                &AllStark::default(),
-                test.gen_inputs,
-                &StarkConfig::standard_fast_config(),
-                &mut TimingTree::default(),
-            );
+            let res = simulate_execution::<GoldilocksField>(test.gen_inputs);
 
             if let Err(evm_err) = res {
                 return handle_evm_err(evm_err, false, "witness generation");

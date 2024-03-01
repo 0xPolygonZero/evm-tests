@@ -17,16 +17,18 @@ categories = ["cryptography"]
 anyhow = { version = "1.0.71", features = ["backtrace"] }
 clap = {version = "4.2.7", features = ["derive"] }
 ethereum-types = "0.14.1"
-mpt_trie = "0.1.0"
 flexi_logger = { version = "0.25.4", features = ["async"] }
 futures = "0.3.28"
 keccak-hash = "0.10.0"
 log = "0.4.17"
-plonky2 = "0.2.0"
-evm_arithmetization = "0.1.0"
 serde = "1.0.163"
 serde_cbor = "0.11.2"
 tokio = { version = "1.28.1" }
+
+# zk-evm dependencies
+plonky2 = "0.2.0"
+mpt_trie = "0.1.1"
+evm_arithmetization = "0.1.1"
 
 [profile.release]
 opt-level = 3
