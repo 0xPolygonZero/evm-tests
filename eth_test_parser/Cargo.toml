@@ -23,6 +23,7 @@ ethereum-types = { workspace = true }
 flexi_logger = { workspace = true }
 futures = { workspace = true }
 hex = { version = "0.4.3", features = ["serde"] }
+hex-literal = "0.4.1"
 keccak-hash = { workspace = true }
 log = { workspace = true }
 rlp = "0.5.2"

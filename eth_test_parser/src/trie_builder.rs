@@ -12,7 +12,7 @@ use common::{
     config::ETHEREUM_CHAIN_ID,
     types::{ExpectedFinalRoots, Plonky2ParsedTest, TestMetadata},
 };
-use ethereum_types::{H256, U256};
+use ethereum_types::{H160, H256, U256};
 use evm_arithmetization::{generation::TrieInputs, proof::BlockMetadata};
 use keccak_hash::keccak;
 use mpt_trie::{
@@ -22,7 +22,7 @@ use mpt_trie::{
 use rlp::Encodable;
 use rlp_derive::{RlpDecodable, RlpEncodable};
 
-use crate::deserialize::{Block, TestBody};
+use crate::deserialize::{Block, PreAccount, TestBody};
 
 #[derive(RlpDecodable, RlpEncodable)]
 pub(crate) struct AccountRlp {
@@ -63,8 +63,11 @@ impl TestBody {
     pub fn as_plonky2_test_inputs(&self) -> Plonky2ParsedTest {
         let block = &self.block;
 
-        let storage_tries = self.get_storage_tries();
-        let state_trie = self.get_state_trie(&storage_tries);
+        let storage_tries = self.get_storage_tries(&self.pre);
+        let state_trie = self.get_state_trie(&self.pre, &storage_tries);
+
+        let final_storage_tries = self.get_storage_tries(&self.post);
+        let final_state_trie = self.get_state_trie(&self.post, &final_storage_tries);
 
         let tries = TrieInputs {
             state_trie,
@@ -97,7 +100,7 @@ impl TestBody {
             test_name: self.name.clone(),
             txn_bytes: self.get_txn_bytes(),
             final_roots: ExpectedFinalRoots {
-                state_root_hash: header.state_root,
+                state_root_hash: final_state_trie.hash(),
                 txn_trie_root_hash: header.transactions_trie,
                 receipts_trie_root_hash: header.receipt_trie,
             },
@@ -105,8 +108,11 @@ impl TestBody {
         }
     }
 
-    fn get_storage_tries(&self) -> Vec<(H256, HashedPartialTrie)> {
-        self.pre
+    fn get_storage_tries(
+        &self,
+        accounts: &HashMap<H160, PreAccount>,
+    ) -> Vec<(H256, HashedPartialTrie)> {
+        accounts
             .iter()
             .map(|(acc_key, pre_acc)| {
                 let storage_trie = pre_acc
@@ -126,8 +132,12 @@ impl TestBody {
             .collect()
     }
 
-    fn get_state_trie(&self, storage_tries: &[(H256, HashedPartialTrie)]) -> HashedPartialTrie {
-        self.pre
+    fn get_state_trie(
+        &self,
+        accounts: &HashMap<H160, PreAccount>,
+        storage_tries: &[(H256, HashedPartialTrie)],
+    ) -> HashedPartialTrie {
+        accounts
             .iter()
             .map(|(acc_key, pre_acc)| {
                 let addr_hash = hash(acc_key.as_bytes());
