@@ -8,16 +8,17 @@ use std::{
 
 use common::types::TestVariantRunInfo;
 use ethereum_types::U256;
+use evm_arithmetization::{
+    prover::{prove, testing::simulate_execution},
+    verifier::verify_proof,
+    AllStark, StarkConfig,
+};
 use futures::executor::block_on;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::warn;
 use plonky2::{
     field::goldilocks_field::GoldilocksField, plonk::config::KeccakGoldilocksConfig,
     util::timing::TimingTree,
-};
-use plonky2_evm::{
-    all_stark::AllStark, config::StarkConfig, generation::generate_traces, prover::prove,
-    verifier::verify_proof,
 };
 use tokio::{select, time::timeout};
 
@@ -261,12 +262,7 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
 
     match witness_only {
         true => {
-            let res = generate_traces::<GoldilocksField, 2>(
-                &AllStark::default(),
-                test.gen_inputs,
-                &StarkConfig::standard_fast_config(),
-                &mut TimingTree::default(),
-            );
+            let res = simulate_execution::<GoldilocksField>(test.gen_inputs);
 
             if let Err(evm_err) = res {
                 return handle_evm_err(evm_err, false, "witness generation");

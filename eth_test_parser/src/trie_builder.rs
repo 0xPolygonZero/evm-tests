@@ -3,7 +3,7 @@
 //!
 //! In other words
 //! ```ignore
-//! crate::deserialize::TestBody -> plonky2_evm::generation::GenerationInputs
+//! crate::deserialize::TestBody -> evm_arithmetization::generation::GenerationInputs
 //! ```
 use std::collections::HashMap;
 
@@ -11,16 +11,15 @@ use common::{
     config::ETHEREUM_CHAIN_ID,
     types::{ExpectedFinalRoots, Plonky2ParsedTest, TestMetadata},
 };
-use eth_trie_utils::partial_trie::HashedPartialTrie;
-use ethereum_types::BigEndianHash;
-use ethereum_types::{Address, H160, H256, U256};
-use plonky2_evm::{generation::TrieInputs, proof::BlockMetadata};
+use ethereum_types::{Address, BigEndianHash, H160, H256, U256};
+use evm_arithmetization::{generation::TrieInputs, proof::BlockMetadata};
+use mpt_trie::partial_trie::HashedPartialTrie;
 use rlp_derive::{RlpDecodable, RlpEncodable};
-use smt_utils_hermez::code::hash_bytecode_u256;
-use smt_utils_hermez::db::{Db, MemoryDb};
-use smt_utils_hermez::keys::{key_balance, key_code, key_code_length, key_nonce, key_storage};
-use smt_utils_hermez::smt::Smt;
-use smt_utils_hermez::utils::hashout2u;
+use smt_trie::code::hash_bytecode_u256;
+use smt_trie::db::{Db, MemoryDb};
+use smt_trie::keys::{key_balance, key_code, key_code_length, key_nonce, key_storage};
+use smt_trie::smt::Smt;
+use smt_trie::utils::hashout2u;
 
 use crate::deserialize::{Block, PreAccount, TestBody};
 

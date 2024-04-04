@@ -17,16 +17,19 @@ categories = ["cryptography"]
 anyhow = { version = "1.0.71", features = ["backtrace"] }
 clap = {version = "4.2.7", features = ["derive"] }
 ethereum-types = "0.14.1"
-eth_trie_utils = { git = "https://github.com/0xPolygonZero/eth_trie_utils.git", rev = "7fc3c3f54b3cec9c6fc5ffc5230910bd1cb77f76" }
 flexi_logger = { version = "0.25.4", features = ["async"] }
 futures = "0.3.28"
 keccak-hash = "0.10.0"
 log = "0.4.17"
-plonky2 = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "ca2e56e23bd91859f387ae00c8647ca735efeb0f" }
-plonky2_evm = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "ca2e56e23bd91859f387ae00c8647ca735efeb0f" }
 serde = "1.0.163"
 serde_cbor = "0.11.2"
 tokio = { version = "1.28.1" }
+
+# zk-evm dependencies
+plonky2 = "0.2.0"
+mpt_trie = { git = "https://github.com/0xPolygonZero/zk_evm", rev = "ca06c9dd48616f6ea67880f2a0a7280db68f03d3" }
+smt_trie = { git = "https://github.com/0xPolygonZero/zk_evm", rev = "ca06c9dd48616f6ea67880f2a0a7280db68f03d3" }
+evm_arithmetization = { git = "https://github.com/0xPolygonZero/zk_evm", rev = "ca06c9dd48616f6ea67880f2a0a7280db68f03d3" }
 
 [profile.release]
 opt-level = 3
