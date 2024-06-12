@@ -18,6 +18,7 @@ use keccak_hash::keccak;
 use mpt_trie::{
     nibbles::Nibbles,
     partial_trie::{HashedPartialTrie, PartialTrie},
+    utils::TryFromIterator,
 };
 use rlp::Encodable;
 use rlp_derive::{RlpDecodable, RlpEncodable};
@@ -106,17 +107,19 @@ impl TestBody {
         self.pre
             .iter()
             .map(|(acc_key, pre_acc)| {
-                let storage_trie = pre_acc
-                    .storage
-                    .iter()
-                    .filter(|(_, v)| !v.is_zero())
-                    .map(|(k, v)| {
-                        (
-                            Nibbles::from_h256_be(hash(&u256_to_be_bytes(*k))),
-                            v.rlp_bytes().to_vec(),
-                        )
-                    })
-                    .collect();
+                let storage_trie = HashedPartialTrie::try_from_iter(
+                    pre_acc
+                        .storage
+                        .iter()
+                        .filter(|(_, v)| !v.is_zero())
+                        .map(|(k, v)| {
+                            (
+                                Nibbles::from_h256_be(hash(&u256_to_be_bytes(*k))),
+                                v.rlp_bytes().to_vec(),
+                            )
+                        }),
+                )
+                .unwrap();
 
                 (hash(acc_key.as_bytes()), storage_trie)
             })
@@ -124,29 +127,26 @@ impl TestBody {
     }
 
     fn get_state_trie(&self, storage_tries: &[(H256, HashedPartialTrie)]) -> HashedPartialTrie {
-        self.pre
-            .iter()
-            .map(|(acc_key, pre_acc)| {
-                let addr_hash = hash(acc_key.as_bytes());
-                let code_hash = hash(&pre_acc.code.0);
-                let storage_hash = get_storage_hash(&addr_hash, storage_tries);
+        HashedPartialTrie::try_from_iter(self.pre.iter().map(|(acc_key, pre_acc)| {
+            let addr_hash = hash(acc_key.as_bytes());
+            let code_hash = hash(&pre_acc.code.0);
+            let storage_hash = get_storage_hash(&addr_hash, storage_tries);
 
-                let rlp = AccountRlp {
-                    nonce: pre_acc.nonce,
-                    balance: pre_acc.balance,
-                    storage_hash,
-                    code_hash,
-                }
-                .rlp_bytes();
+            let rlp = AccountRlp {
+                nonce: pre_acc.nonce,
+                balance: pre_acc.balance,
+                storage_hash,
+                code_hash,
+            }
+            .rlp_bytes();
 
-                (Nibbles::from_h256_be(addr_hash), rlp.to_vec())
-            })
-            .collect()
+            (Nibbles::from_h256_be(addr_hash), rlp.to_vec())
+        }))
+        .unwrap()
     }
 
     pub(crate) fn get_txn_bytes(&self) -> Vec<u8> {
-        let transaction = &self.get_tx();
-        rlp::encode(transaction).to_vec()
+        self.get_tx().0
     }
 }
 
