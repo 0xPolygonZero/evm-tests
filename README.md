@@ -86,9 +86,9 @@ The total number of tests below excludes:
 - stress tests with a zkEVM CPU overhead greater than Goldilocks' two-adic subgroup size.
 
 
-| Total | :white_check_mark: |   :x:   |  Coverage  |
-|:-----:|:------------------:|:-------:|:----------:|
-| 14904	|        14896       |  8[^1]  |   99.95%   |
+| Total | :white_check_mark: |   :x:  |  Coverage  |
+|:-----:|:------------------:|:------:|:----------:|
+| 14904	|        14896       | 8 [^1] |   99.95%   |
 
 [^1]: These tests have an impossible initial configuration (i.e. empty accounts with non-empty storage),
 and end up not being provable.
