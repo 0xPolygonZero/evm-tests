@@ -46,7 +46,8 @@ The test runner supports secondary arguments to customize the testing flow. Whil
 below are listed the most useful ones:
 
 * `--blacklist-path` (short `b`): An optional relative path to a blacklist file containing test variants to prevent from running.
-This can be used to skip particularly heavy or badly configured tests.
+This can be used to skip particularly heavy or badly configured tests. A default [blacklist](./shanghai_heavy_tests_blacklist.txt)
+is provided to allow any modern laptop to run witness generation for all test variants in about 40min.
 * `--variant-filter` (short `v`): Only run specified test variants (either a single value or a range), e.g. `0` or `0..=5`
 for instance. Note that the variant `n` for test `foo` isn't represented as `foo_n`, as variants keep the same naming
 format as their remote, namely `foo_dx_gy_vz` with `x`, `y`, `z` varying integers.
