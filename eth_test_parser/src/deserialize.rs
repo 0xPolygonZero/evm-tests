@@ -16,6 +16,8 @@ use serde::{
 };
 use serde_with::serde_as;
 
+use crate::config::UNPROVABLE_VARIANTS;
+
 #[derive(Deserialize, Debug, Clone)]
 // "self" just points to this module.
 pub(crate) struct ByteString(#[serde(with = "self")] pub(crate) Vec<u8>);
@@ -339,7 +341,9 @@ impl<'de> Deserialize<'de> for TestFile {
                 // While we are parsing many values, we only care about the ones containing
                 // `Shanghai` in their key name.
                 while let Some((key, value)) = access.next_entry::<String, ValueJson>()? {
-                    if key.contains("Shanghai") {
+                    if key.contains("Shanghai")
+                        && !UNPROVABLE_VARIANTS.iter().any(|v| key.contains(v))
+                    {
                         if value.blocks[0].transaction_sequence.is_none() {
                             let test_body = TestBody::from_parsed_json(&value, key.clone());
 
