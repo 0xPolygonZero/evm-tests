@@ -81,7 +81,7 @@ commit [8077d24](https://github.com/ethereum/legacytests/commit/8077d241740de5a4
 
 The total number of tests below excludes:
 
-- tests with invalid block RLP encoding (from which all data is retrieved)
+- tests with invalid block RLP encoding (from which all the test data is retrieved)
 - tests with a txn gas used greater than $2^{32}-1$, see [Note on ignored tests](#note-on-ignored-tests).
 - stress tests with a zkEVM CPU overhead greater than Goldilocks' two-adic subgroup size.
 
