@@ -26,10 +26,10 @@ serde_cbor = "0.11.2"
 tokio = { version = "1.28.1" }
 
 # zk-evm dependencies
-plonky2 = "0.2.0"
-mpt_trie = { git = "https://github.com/0xPolygonZero/zk_evm", rev = "ca06c9dd48616f6ea67880f2a0a7280db68f03d3" }
-smt_trie = { git = "https://github.com/0xPolygonZero/zk_evm", rev = "ca06c9dd48616f6ea67880f2a0a7280db68f03d3" }
-evm_arithmetization = { git = "https://github.com/0xPolygonZero/zk_evm", rev = "ca06c9dd48616f6ea67880f2a0a7280db68f03d3" }
+plonky2 = "0.2.2"
+mpt_trie = { git = "https://github.com/0xPolygonZero/zk_evm", branch = "feat/type2" }
+smt_trie = { git = "https://github.com/0xPolygonZero/zk_evm", branch = "feat/type2" }
+evm_arithmetization = { git = "https://github.com/0xPolygonZero/zk_evm", branch = "feat/type2" }
 
 [profile.release]
 opt-level = 3

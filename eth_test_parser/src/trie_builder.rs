@@ -129,8 +129,7 @@ impl TestBody {
     }
 
     pub(crate) fn get_txn_bytes(&self) -> Vec<u8> {
-        let transaction = &self.get_tx();
-        rlp::encode(transaction).to_vec()
+        self.get_tx().0
     }
 }
 

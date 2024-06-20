@@ -682,8 +682,8 @@ dependencies = [
 
 [[package]]
 name = "evm_arithmetization"
-version = "0.1.2"
-source = "git+https://github.com/0xPolygonZero/zk_evm?rev=ca06c9dd48616f6ea67880f2a0a7280db68f03d3#ca06c9dd48616f6ea67880f2a0a7280db68f03d3"
+version = "0.2.0"
+source = "git+https://github.com/0xPolygonZero/zk_evm?branch=feat/type2#24639a7562debf5c17f16067f9c330e2eb18c3ee"
 dependencies = [
  "anyhow",
  "bytes",
@@ -701,9 +701,9 @@ dependencies = [
  "once_cell",
  "pest",
  "pest_derive",
- "plonky2 0.2.1",
- "plonky2_maybe_rayon 0.2.0",
- "plonky2_util 0.2.0",
+ "plonky2",
+ "plonky2_maybe_rayon",
+ "plonky2_util",
  "rand",
  "rand_chacha",
  "rlp",
@@ -736,7 +736,7 @@ dependencies = [
  "indicatif",
  "keccak-hash 0.10.0",
  "log",
- "plonky2 0.2.1",
+ "plonky2",
  "serde",
  "serde_cbor",
  "similar",
@@ -1034,6 +1034,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "impl-num-traits"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "951641f13f873bff03d4bf19ae8bec531935ac0ac2cc775f84d7edfdcfed3f17"
+dependencies = [
+ "integer-sqrt",
+ "num-traits",
+ "uint",
+]
+
+[[package]]
 name = "impl-rlp"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1083,6 +1094,15 @@ dependencies = [
  "number_prefix",
  "portable-atomic 0.3.20",
  "unicode-width",
+]
+
+[[package]]
+name = "integer-sqrt"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "276ec31bcb4a9ee45f58bec6f9ec700ae4cf4f4f8f2fa7e06cb406bd5ffdd770"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
@@ -1282,13 +1302,17 @@ dependencies = [
 
 [[package]]
 name = "mpt_trie"
-version = "0.2.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm?rev=ca06c9dd48616f6ea67880f2a0a7280db68f03d3#ca06c9dd48616f6ea67880f2a0a7280db68f03d3"
+version = "0.3.0"
+source = "git+https://github.com/0xPolygonZero/zk_evm?branch=feat/type2#24639a7562debf5c17f16067f9c330e2eb18c3ee"
 dependencies = [
  "bytes",
  "enum-as-inner",
  "ethereum-types",
  "hex",
+ "impl-codec",
+ "impl-num-traits",
+ "impl-rlp",
+ "impl-serde",
  "keccak-hash 0.10.0",
  "log",
  "num",
@@ -1560,34 +1584,9 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "plonky2"
-version = "0.1.4"
-source = "git+https://github.com/0xPolygonZero/plonky2?rev=c1728d4e43e9ff434f9297e4f6171ddf28ec8fca#c1728d4e43e9ff434f9297e4f6171ddf28ec8fca"
-dependencies = [
- "ahash",
- "anyhow",
- "getrandom",
- "hashbrown 0.14.3",
- "itertools",
- "keccak-hash 0.8.0",
- "log",
- "num",
- "plonky2_field 0.1.1",
- "plonky2_maybe_rayon 0.1.1",
- "plonky2_util 0.1.1",
- "rand",
- "rand_chacha",
- "serde",
- "serde_json",
- "static_assertions",
- "unroll",
- "web-time",
-]
-
-[[package]]
-name = "plonky2"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d04c7dfa293cd62a8e1e3f21157dba8508ab2de6078b0e5fae202a4fc98ef224"
+checksum = "85f26b090b989aebdeaf6a4eed748c1fbcabf67e7273a22e4e0c877b63846d0f"
 dependencies = [
  "ahash",
  "anyhow",
@@ -1597,9 +1596,9 @@ dependencies = [
  "keccak-hash 0.8.0",
  "log",
  "num",
- "plonky2_field 0.2.1",
- "plonky2_maybe_rayon 0.2.0",
- "plonky2_util 0.2.0",
+ "plonky2_field",
+ "plonky2_maybe_rayon",
+ "plonky2_util",
  "rand",
  "rand_chacha",
  "serde",
@@ -1610,41 +1609,18 @@ dependencies = [
 
 [[package]]
 name = "plonky2_field"
-version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2?rev=c1728d4e43e9ff434f9297e4f6171ddf28ec8fca#c1728d4e43e9ff434f9297e4f6171ddf28ec8fca"
-dependencies = [
- "anyhow",
- "itertools",
- "num",
- "plonky2_util 0.1.1",
- "rand",
- "serde",
- "static_assertions",
- "unroll",
-]
-
-[[package]]
-name = "plonky2_field"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e27aab0723672905a49e4771232d7fcf71b97dd0e57634f1dfb5492635f765fc"
+checksum = "3a1dca60ad900d81b1fe2df3d0b88d43345988e2935e6709176e96573f4bcf5d"
 dependencies = [
  "anyhow",
  "itertools",
  "num",
- "plonky2_util 0.2.0",
+ "plonky2_util",
  "rand",
  "serde",
  "static_assertions",
  "unroll",
-]
-
-[[package]]
-name = "plonky2_maybe_rayon"
-version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2?rev=c1728d4e43e9ff434f9297e4f6171ddf28ec8fca#c1728d4e43e9ff434f9297e4f6171ddf28ec8fca"
-dependencies = [
- "rayon",
 ]
 
 [[package]]
@@ -1655,11 +1631,6 @@ checksum = "92ff44a90aaca13e10e7ddf8fab815ba1b404c3f7c3ca82aaf11c46beabaa923"
 dependencies = [
  "rayon",
 ]
-
-[[package]]
-name = "plonky2_util"
-version = "0.1.1"
-source = "git+https://github.com/0xPolygonZero/plonky2?rev=c1728d4e43e9ff434f9297e4f6171ddf28ec8fca#c1728d4e43e9ff434f9297e4f6171ddf28ec8fca"
 
 [[package]]
 name = "plonky2_util"
@@ -2016,7 +1987,7 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 [[package]]
 name = "smt_trie"
 version = "0.1.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm?rev=ca06c9dd48616f6ea67880f2a0a7280db68f03d3#ca06c9dd48616f6ea67880f2a0a7280db68f03d3"
+source = "git+https://github.com/0xPolygonZero/zk_evm?branch=feat/type2#24639a7562debf5c17f16067f9c330e2eb18c3ee"
 dependencies = [
  "bytes",
  "enum-as-inner",
@@ -2027,7 +1998,7 @@ dependencies = [
  "log",
  "num-traits",
  "parking_lot",
- "plonky2 0.1.4",
+ "plonky2",
  "rand",
  "rlp",
  "serde",
@@ -2047,9 +2018,9 @@ dependencies = [
 
 [[package]]
 name = "starky"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acf2fe03f53197fbd5e2f2e5fbb809f8e953881cc729261b55f71134323bbfd6"
+checksum = "8a8480ca5b8eedf83ad070a780783b4e21a56c6ef66b4c0d1b7520b72bdfda1b"
 dependencies = [
  "ahash",
  "anyhow",
@@ -2057,9 +2028,9 @@ dependencies = [
  "itertools",
  "log",
  "num-bigint",
- "plonky2 0.2.1",
- "plonky2_maybe_rayon 0.2.0",
- "plonky2_util 0.2.0",
+ "plonky2",
+ "plonky2_maybe_rayon",
+ "plonky2_util",
 ]
 
 [[package]]
