@@ -3,6 +3,9 @@ use std::{collections::HashMap, marker::PhantomData};
 use anyhow::Result;
 use bytes::Bytes;
 use ethereum_types::{Address, H160, H256, U256};
+use evm_arithmetization::cpu::kernel::global_exit_root::{
+    GLOBAL_EXIT_ROOT_CONTRACT_CODE, GLOBAL_EXIT_ROOT_MANAGER_L2_STATE_KEY,
+};
 use evm_arithmetization::generation::mpt::transaction_testing::{
     AddressOption, LegacyTransactionRlp,
 };
@@ -104,6 +107,9 @@ pub(crate) struct BlockHeader {
     pub(crate) _nonce: Vec<u8>,
     pub(crate) base_fee_per_gas: U256,
     pub(crate) _withdrawals_root: FieldOption<H256>,
+    pub(crate) blob_gas_used: U256,
+    pub(crate) excess_blob_gas: U256,
+    pub(crate) parent_beacon_block_root: H256,
 }
 
 // Some tests store the access list in a way that doesn't respect the specs,
@@ -182,6 +188,25 @@ pub struct CustomFeeMarketTransactionRlp {
     _s: U256,
 }
 
+// A custom type-2 txn to handle some edge-cases with the access_list field.
+#[derive(RlpDecodable, Debug, Clone)]
+pub struct CustomBlobTransactionRlp {
+    _chain_id: u64,
+    _nonce: U256,
+    _max_priority_fee_per_gas: U256,
+    _max_fee_per_gas: U256,
+    _gas: U256,
+    _to: H160,
+    _value: U256,
+    _data: Bytes,
+    _access_list: Vec<AccessItemRlp>,
+    _max_fee_per_blob_gas: U256,
+    _blob_versioned_hashes: Vec<H256>,
+    _y_parity: U256,
+    _r: U256,
+    _s: U256,
+}
+
 #[derive(Clone, Debug)]
 pub struct Transaction(pub Vec<u8>);
 
@@ -192,6 +217,8 @@ impl Transaction {
             1 => CustomAccessListTransactionRlp::decode(&Rlp::new(&bytes[1..]))
                 .map(|_| Self(bytes.to_vec())),
             2 => CustomFeeMarketTransactionRlp::decode(&Rlp::new(&bytes[1..]))
+                .map(|_| Self(bytes.to_vec())),
+            3 => CustomBlobTransactionRlp::decode(&Rlp::new(&bytes[1..]))
                 .map(|_| Self(bytes.to_vec())),
             _ => LegacyTransactionRlp::decode(&Rlp::new(bytes)).map(|_| Self(bytes.to_vec())),
         }
@@ -281,12 +308,30 @@ impl TestBody {
         let genesis_block: GenesisBlock =
             rlp::decode(&value.genesis_rlp.as_ref().unwrap().0).unwrap();
 
+        let mut pre = value.pre.clone();
+        let mut post = value.post_state.clone();
+
+        let exit_root_pre_account = PreAccount {
+            balance: 0.into(),
+            nonce: 0,
+            code: ByteString(GLOBAL_EXIT_ROOT_CONTRACT_CODE.to_vec()),
+            storage: HashMap::new(),
+        };
+        pre.insert(
+            H160(GLOBAL_EXIT_ROOT_MANAGER_L2_STATE_KEY.1),
+            exit_root_pre_account.clone(),
+        );
+        post.insert(
+            H160(GLOBAL_EXIT_ROOT_MANAGER_L2_STATE_KEY.1),
+            exit_root_pre_account,
+        );
+
         Self {
             name: variant_name,
             block,
             genesis_block,
-            pre: value.pre.clone(),
-            post: value.post_state.clone(),
+            pre,
+            post,
         }
     }
 
@@ -303,11 +348,12 @@ struct ValueJson {
     #[serde(rename = "genesisRLP")]
     pub(crate) genesis_rlp: Option<ByteString>,
     pub(crate) pre: HashMap<H160, PreAccount>,
+    #[serde(rename = "postState")]
     pub(crate) post_state: HashMap<H160, PreAccount>,
 }
 
 // Wrapper around a regular `HashMap` used to conveniently skip
-// non-Shanghai related tests when deserializing.
+// non-Cancun related tests when deserializing.
 #[derive(Default, Debug)]
 pub(crate) struct TestFile(pub(crate) HashMap<String, TestBody>);
 
@@ -342,9 +388,9 @@ impl<'de> Deserialize<'de> for TestFile {
                 let mut map = TestFile(HashMap::with_capacity(access.size_hint().unwrap_or(0)));
 
                 // While we are parsing many values, we only care about the ones containing
-                // `Shanghai` in their key name.
+                // `Cancun` in their key name.
                 while let Some((key, value)) = access.next_entry::<String, ValueJson>()? {
-                    if key.contains("Shanghai")
+                    if key.contains("_Cancun")
                         && !UNPROVABLE_VARIANTS.iter().any(|v| key.contains(v))
                     {
                         if value.blocks[0].transaction_sequence.is_none() {

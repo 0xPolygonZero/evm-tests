@@ -44,6 +44,9 @@ impl Block {
             block_base_fee: header.base_fee_per_gas,
             block_random: header.mix_hash,
             block_gas_used: header.gas_used,
+            block_blob_gas_used: header.blob_gas_used,
+            block_excess_blob_gas: header.excess_blob_gas,
+            parent_beacon_block_root: header.parent_beacon_block_root,
             block_bloom: header
                 .bloom
                 .chunks_exact(32)

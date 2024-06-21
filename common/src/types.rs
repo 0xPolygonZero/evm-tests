@@ -52,6 +52,7 @@ impl ParsedTestManifest {
                     checkpoint_state_trie_root: t_var.plonky2_metadata.genesis_state_root,
                     contract_code: t_var.plonky2_metadata.contract_code.clone(),
                     block_metadata: t_var.plonky2_metadata.block_metadata.clone(),
+                    global_exit_roots: vec![], // not part of Ethereum tests
                     txn_number_before: U256::zero(),
                     gas_used_before: U256::zero(),
                     gas_used_after: t_var.plonky2_metadata.block_metadata.block_gas_used,

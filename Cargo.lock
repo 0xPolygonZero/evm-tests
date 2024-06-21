@@ -683,7 +683,7 @@ dependencies = [
 [[package]]
 name = "evm_arithmetization"
 version = "0.2.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm?branch=feat/type2#24639a7562debf5c17f16067f9c330e2eb18c3ee"
+source = "git+https://github.com/0xPolygonZero/zk_evm?branch=type2_cancun#58dcc8ba2d05d3b4c9f3865c1450c4e0513b9b98"
 dependencies = [
  "anyhow",
  "bytes",
@@ -710,6 +710,7 @@ dependencies = [
  "rlp-derive",
  "serde",
  "serde_json",
+ "sha2",
  "smt_trie",
  "starky",
  "static_assertions",
@@ -1303,7 +1304,7 @@ dependencies = [
 [[package]]
 name = "mpt_trie"
 version = "0.3.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm?branch=feat/type2#24639a7562debf5c17f16067f9c330e2eb18c3ee"
+source = "git+https://github.com/0xPolygonZero/zk_evm?branch=type2_cancun#58dcc8ba2d05d3b4c9f3865c1450c4e0513b9b98"
 dependencies = [
  "bytes",
  "enum-as-inner",
@@ -1987,7 +1988,7 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 [[package]]
 name = "smt_trie"
 version = "0.1.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm?branch=feat/type2#24639a7562debf5c17f16067f9c330e2eb18c3ee"
+source = "git+https://github.com/0xPolygonZero/zk_evm?branch=type2_cancun#58dcc8ba2d05d3b4c9f3865c1450c4e0513b9b98"
 dependencies = [
  "bytes",
  "enum-as-inner",
