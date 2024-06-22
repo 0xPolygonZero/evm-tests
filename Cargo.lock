@@ -640,6 +640,7 @@ dependencies = [
  "flexi_logger",
  "futures",
  "hex",
+ "hex-literal",
  "keccak-hash 0.10.0",
  "log",
  "mpt_trie",
@@ -682,8 +683,7 @@ dependencies = [
 [[package]]
 name = "evm_arithmetization"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87d958d9badfbbd52c003da99378ff08c11f16efd4c4729e0fe2ca2224c46e8e"
+source = "git+https://github.com/0xPolygonZero/zk_evm?branch=feat/cancun#2ad611aeb1d76ff9b118c20e6902ce929fd5f981"
 dependencies = [
  "anyhow",
  "bytes",
@@ -710,6 +710,7 @@ dependencies = [
  "rlp-derive",
  "serde",
  "serde_json",
+ "sha2",
  "starky",
  "static_assertions",
  "tiny-keccak",
@@ -1302,8 +1303,7 @@ dependencies = [
 [[package]]
 name = "mpt_trie"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3febfed5b65d35c9b9811733e811a48b0591ed16dc07bee08c213c888b974b8"
+source = "git+https://github.com/0xPolygonZero/zk_evm?branch=feat/cancun#2ad611aeb1d76ff9b118c20e6902ce929fd5f981"
 dependencies = [
  "bytes",
  "enum-as-inner",
