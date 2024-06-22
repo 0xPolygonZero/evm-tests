@@ -4,12 +4,11 @@ use anyhow::Result;
 use bytes::Bytes;
 use ethereum_types::{Address, H160, H256, U256};
 use evm_arithmetization::generation::mpt::transaction_testing::{
-    AccessListItemRlp, AccessListTransactionRlp, AddressOption, BlobTransactionRlp,
-    FeeMarketTransactionRlp, LegacyTransactionRlp,
+    AddressOption, LegacyTransactionRlp,
 };
 use hex::FromHex;
 use hex_literal::hex;
-use rlp::{Decodable, DecoderError, Encodable, Rlp, RlpStream};
+use rlp::{Decodable, DecoderError, Rlp};
 use rlp_derive::RlpDecodable;
 use serde::de::MapAccess;
 use serde::{
@@ -17,6 +16,8 @@ use serde::{
     Deserialize, Deserializer,
 };
 use serde_with::serde_as;
+
+use crate::config::UNPROVABLE_VARIANTS;
 
 #[derive(Deserialize, Debug, Clone)]
 // "self" just points to this module.
@@ -113,32 +114,21 @@ pub(crate) struct BlockHeader {
 // and hence they require a specific handling.
 #[derive(Clone, Debug, RlpDecodable)]
 pub struct AccessItemRlp {
-    pub address: Address,
-    pub storage_keys: Vec<StorageKey>,
+    _address: Address,
+    _storage_keys: Vec<StorageKey>,
 }
 
 #[derive(Clone, Debug)]
-pub struct StorageKey(pub U256);
+pub struct StorageKey;
 
 impl Decodable for StorageKey {
     fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
-        // Decode the key as a `Vec<u8>` to deal with badly encoded scalars,
-        // and then convert back to U256.
-        let key = rlp.as_val::<Vec<u8>>()?;
-        if key.len() == 1 && key[0] == 0x80 {
-            return Ok(StorageKey(U256::zero()));
-        }
+        // We just need to decode the key as a `Vec<u8>`
+        // to deal with badly encoded scalars, but we do
+        // not care about the result.
+        let _key = rlp.as_val::<Vec<u8>>()?;
 
-        Ok(StorageKey(U256::from_big_endian(&key)))
-    }
-}
-
-impl AccessItemRlp {
-    fn into_regular(self) -> AccessListItemRlp {
-        AccessListItemRlp {
-            address: self.address,
-            storage_keys: self.storage_keys.iter().map(|k| k.0).collect(),
-        }
+        Ok(Self)
     }
 }
 
@@ -166,183 +156,76 @@ impl Decodable for Transactions {
 // A custom type-1 txn to handle some edge-cases with the access_list field.
 #[derive(RlpDecodable, Debug, Clone)]
 pub struct CustomAccessListTransactionRlp {
-    pub chain_id: u64,
-    pub nonce: U256,
-    pub gas_price: U256,
-    pub gas: U256,
-    pub to: AddressOption,
-    pub value: U256,
-    pub data: Bytes,
-    pub access_list: Vec<AccessItemRlp>,
-    pub y_parity: U256,
-    pub r: U256,
-    pub s: U256,
-}
-
-impl CustomAccessListTransactionRlp {
-    fn into_regular(self) -> AccessListTransactionRlp {
-        AccessListTransactionRlp {
-            chain_id: self.chain_id,
-            nonce: self.nonce,
-            gas_price: self.gas_price,
-            gas: self.gas,
-            to: self.to.clone(),
-            value: self.value,
-            data: self.data.clone(),
-            access_list: self
-                .access_list
-                .clone()
-                .into_iter()
-                .map(|x| x.into_regular())
-                .collect(),
-            y_parity: self.y_parity,
-            r: self.r,
-            s: self.s,
-        }
-    }
+    _chain_id: u64,
+    _nonce: U256,
+    _gas_price: U256,
+    _gas: U256,
+    _to: AddressOption,
+    _value: U256,
+    _data: Bytes,
+    _access_list: Vec<AccessItemRlp>,
+    _y_parity: U256,
+    _r: U256,
+    _s: U256,
 }
 
 // A custom type-2 txn to handle some edge-cases with the access_list field.
 #[derive(RlpDecodable, Debug, Clone)]
 pub struct CustomFeeMarketTransactionRlp {
-    pub chain_id: u64,
-    pub nonce: U256,
-    pub max_priority_fee_per_gas: U256,
-    pub max_fee_per_gas: U256,
-    pub gas: U256,
-    pub to: AddressOption,
-    pub value: U256,
-    pub data: Bytes,
-    pub access_list: Vec<AccessItemRlp>,
-    pub y_parity: U256,
-    pub r: U256,
-    pub s: U256,
-}
-
-impl CustomFeeMarketTransactionRlp {
-    fn into_regular(self) -> FeeMarketTransactionRlp {
-        FeeMarketTransactionRlp {
-            chain_id: self.chain_id,
-            nonce: self.nonce,
-            max_priority_fee_per_gas: self.max_priority_fee_per_gas,
-            max_fee_per_gas: self.max_fee_per_gas,
-            gas: self.gas,
-            to: self.to.clone(),
-            value: self.value,
-            data: self.data.clone(),
-            access_list: self
-                .access_list
-                .clone()
-                .into_iter()
-                .map(|x| x.into_regular())
-                .collect(),
-            y_parity: self.y_parity,
-            r: self.r,
-            s: self.s,
-        }
-    }
+    _chain_id: u64,
+    _nonce: U256,
+    _max_priority_fee_per_gas: U256,
+    _max_fee_per_gas: U256,
+    _gas: U256,
+    _to: AddressOption,
+    _value: U256,
+    _data: Bytes,
+    _access_list: Vec<AccessItemRlp>,
+    _y_parity: U256,
+    _r: U256,
+    _s: U256,
 }
 
 // A custom type-2 txn to handle some edge-cases with the access_list field.
 #[derive(RlpDecodable, Debug, Clone)]
 pub struct CustomBlobTransactionRlp {
-    pub chain_id: u64,
-    pub nonce: U256,
-    pub max_priority_fee_per_gas: U256,
-    pub max_fee_per_gas: U256,
-    pub gas: U256,
-    pub to: H160,
-    pub value: U256,
-    pub data: Bytes,
-    pub access_list: Vec<AccessItemRlp>,
-    pub max_fee_per_blob_gas: U256,
-    pub blob_versioned_hashes: Vec<H256>,
-    pub y_parity: U256,
-    pub r: U256,
-    pub s: U256,
-}
-
-impl CustomBlobTransactionRlp {
-    fn into_regular(self) -> BlobTransactionRlp {
-        BlobTransactionRlp {
-            chain_id: self.chain_id,
-            nonce: self.nonce,
-            max_priority_fee_per_gas: self.max_priority_fee_per_gas,
-            max_fee_per_gas: self.max_fee_per_gas,
-            gas: self.gas,
-            to: self.to,
-            value: self.value,
-            data: self.data.clone(),
-            access_list: self
-                .access_list
-                .clone()
-                .into_iter()
-                .map(|x| x.into_regular())
-                .collect(),
-            max_fee_per_blob_gas: self.max_fee_per_blob_gas,
-            blob_versioned_hashes: self.blob_versioned_hashes,
-            y_parity: self.y_parity,
-            r: self.r,
-            s: self.s,
-        }
-    }
+    _chain_id: u64,
+    _nonce: U256,
+    _max_priority_fee_per_gas: U256,
+    _max_fee_per_gas: U256,
+    _gas: U256,
+    _to: H160,
+    _value: U256,
+    _data: Bytes,
+    _access_list: Vec<AccessItemRlp>,
+    _max_fee_per_blob_gas: U256,
+    _blob_versioned_hashes: Vec<H256>,
+    _y_parity: U256,
+    _r: U256,
+    _s: U256,
 }
 
 #[derive(Clone, Debug)]
-pub enum Transaction {
-    Legacy(LegacyTransactionRlp),
-    AccessList(AccessListTransactionRlp),
-    FeeMarket(FeeMarketTransactionRlp),
-    Blob(BlobTransactionRlp),
-}
+pub struct Transaction(pub Vec<u8>);
 
 impl Transaction {
     fn decode_actual_rlp(bytes: &[u8]) -> Result<Self, DecoderError> {
         let first_byte = bytes.first().ok_or(DecoderError::RlpInvalidLength)?;
         match *first_byte {
             1 => CustomAccessListTransactionRlp::decode(&Rlp::new(&bytes[1..]))
-                .map(|tx| Transaction::AccessList(tx.into_regular())),
+                .map(|_| Self(bytes.to_vec())),
             2 => CustomFeeMarketTransactionRlp::decode(&Rlp::new(&bytes[1..]))
-                .map(|tx| Transaction::FeeMarket(tx.into_regular())),
+                .map(|_| Self(bytes.to_vec())),
             3 => CustomBlobTransactionRlp::decode(&Rlp::new(&bytes[1..]))
-                .map(|tx| Transaction::Blob(tx.into_regular())),
-            _ => LegacyTransactionRlp::decode(&Rlp::new(bytes)).map(Transaction::Legacy),
+                .map(|_| Self(bytes.to_vec())),
+            _ => LegacyTransactionRlp::decode(&Rlp::new(bytes)).map(|_| Self(bytes.to_vec())),
         }
-    }
-}
-
-impl Encodable for Transaction {
-    fn rlp_append(&self, s: &mut RlpStream) {
-        match self {
-            Transaction::Legacy(tx) => s.append(tx),
-            Transaction::AccessList(tx) => {
-                s.encoder().encode_value(&[0x01]);
-                s.append(tx)
-            }
-            Transaction::FeeMarket(tx) => {
-                s.encoder().encode_value(&[0x02]);
-                s.append(tx)
-            }
-            Transaction::Blob(tx) => {
-                s.encoder().encode_value(&[0x03]);
-                s.append(tx)
-            }
-        };
     }
 }
 
 impl Decodable for Transaction {
     fn decode(rlp: &Rlp) -> Result<Self, DecoderError> {
-        let first_byte = rlp.as_raw().first().ok_or(DecoderError::RlpInvalidLength)?;
-        let attempt = match *first_byte {
-            1 => CustomAccessListTransactionRlp::decode(&Rlp::new(&rlp.as_raw()[1..]))
-                .map(|tx| Transaction::AccessList(tx.into_regular())),
-            2 => CustomFeeMarketTransactionRlp::decode(&Rlp::new(&rlp.as_raw()[1..]))
-                .map(|tx| Transaction::FeeMarket(tx.into_regular())),
-            3 => CustomBlobTransactionRlp::decode(&Rlp::new(&rlp.as_raw()[1..]))
-                .map(|tx| Transaction::Blob(tx.into_regular())),
-            _ => LegacyTransactionRlp::decode(rlp).map(Transaction::Legacy),
-        };
+        let attempt = Transaction::decode_actual_rlp(rlp.as_raw());
 
         // Somes tests have a different format and store the RLP encoding of the
         // transaction, which needs an additional layer of decoding.
@@ -506,31 +389,18 @@ impl<'de> Deserialize<'de> for TestFile {
                 // While we are parsing many values, we only care about the ones containing
                 // `Cancun` in their key name.
                 while let Some((key, value)) = access.next_entry::<String, ValueJson>()? {
-                    if key.contains("_Cancun") {
+                    if key.contains("_Cancun")
+                        && !UNPROVABLE_VARIANTS.iter().any(|v| key.contains(v))
+                    {
                         if value.blocks[0].transaction_sequence.is_none() {
                             let test_body = TestBody::from_parsed_json(&value, key.clone());
 
-                            // Sanity check: some tests *do not* abide by standard RLP encoding
-                            // rules, therefore causing discrepancies between the "expected"
-                            // encoding of the transaction that is part of the block RLP and used to
-                            // form the transactions trie, and the *regular* encoding computed here
-                            // after deserialization and to be fed to plonky2 zkEVM.
+                            // Ensure that the gas used fits in 32 bits, otherwise the prover will
+                            // abort.
+                            if TryInto::<u32>::try_into(test_body.block.block_header.gas_used)
+                                .is_ok()
                             {
-                                let rlp = &value.blocks[0].rlp.0;
-                                let encoded_txn = rlp::encode(&test_body.get_tx()).to_vec();
-                                // Ensure that the encoding we will provide the zkEVM prover is in
-                                // the block RLP.
-                                if rlp.windows(encoded_txn.len()).any(|c| c == encoded_txn) {
-                                    // Finally, ensure that the gas used fits in 32 bits, otherwise
-                                    // the prover will abort.
-                                    if TryInto::<u32>::try_into(
-                                        test_body.block.block_header.gas_used,
-                                    )
-                                    .is_ok()
-                                    {
-                                        map.0.insert(key, test_body);
-                                    }
-                                }
+                                map.0.insert(key, test_body);
                             }
                         } else {
                             // Some tests deal with malformed transactions that wouldn't be passed

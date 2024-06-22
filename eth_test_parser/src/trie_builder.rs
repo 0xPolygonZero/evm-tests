@@ -15,10 +15,10 @@ use common::{
 use ethereum_types::{H160, H256, U256};
 use evm_arithmetization::{generation::TrieInputs, proof::BlockMetadata};
 use keccak_hash::keccak;
-use mpt_trie::utils::TryFromIterator;
 use mpt_trie::{
     nibbles::Nibbles,
     partial_trie::{HashedPartialTrie, PartialTrie},
+    utils::TryFromIterator,
 };
 use rlp::Encodable;
 use rlp_derive::{RlpDecodable, RlpEncodable};
@@ -159,8 +159,7 @@ impl TestBody {
     }
 
     pub(crate) fn get_txn_bytes(&self) -> Vec<u8> {
-        let transaction = &self.get_tx();
-        rlp::encode(transaction).to_vec()
+        self.get_tx().0
     }
 }
 
