@@ -12,14 +12,14 @@ common = { path = "../common" }
 plonky2 = { workspace = true }
 evm_arithmetization = { workspace = true }
 
-anyhow = { version = "1.0", features = ["backtrace"] }
+anyhow = { workspace = true }
 askama = "0.12.0"
 chrono = { version = "0.4.24", features = ["serde"] }
 clap = {version = "4.2.7", features = ["derive"] }
 csv = "1.2.1"
 ctrlc = "3.2.5"
 ethereum-types = "0.14.1"
-flexi_logger = { version = "0.25.4", features = ["async"] }
+flexi_logger = { workspace = true }
 futures = "0.3"
 humantime = "2.1.0"
 indicatif = "0.17.3"

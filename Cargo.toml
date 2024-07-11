@@ -14,7 +14,7 @@ keywords = ["cryptography", "SNARK", "PLONK", "FRI", "plonky2"]
 categories = ["cryptography"]
 
 [workspace.dependencies]
-anyhow = { version = "1.0.71", features = ["backtrace"] }
+anyhow = { version = "1.0.86", features = ["backtrace"] }
 clap = {version = "4.2.7", features = ["derive"] }
 ethereum-types = "0.14.1"
 flexi_logger = { version = "0.25.4", features = ["async"] }
@@ -27,9 +27,9 @@ tokio = { version = "1.28.1" }
 
 # zk-evm dependencies
 plonky2 = "0.2.2"
-mpt_trie = { git = "https://github.com/0xPolygonZero/zk_evm", branch = "feat/type2" }
-smt_trie = { git = "https://github.com/0xPolygonZero/zk_evm", branch = "feat/type2" }
-evm_arithmetization = { git = "https://github.com/0xPolygonZero/zk_evm", branch = "feat/type2" }
+mpt_trie = { git = "https://github.com/0xPolygonZero/zk_evm", branch = "type2_cancun" }
+smt_trie = { git = "https://github.com/0xPolygonZero/zk_evm", branch = "type2_cancun" }
+evm_arithmetization = { git = "https://github.com/0xPolygonZero/zk_evm", branch = "type2_cancun" }
 
 [profile.release]
 opt-level = 3

@@ -13,14 +13,15 @@ smt_trie = { workspace = true }
 mpt_trie = { workspace = true }
 evm_arithmetization = { workspace = true }
 
-anyhow = { version = "1.0.71", features = ["backtrace"] }
+anyhow = { workspace = true }
 bytes = "1.4.0"
 clap = {version = "4.2.7", features = ["derive"] }
 ethereum-types = "0.14.1"
 hex = { version = "0.4.3", features = ["serde"] }
-flexi_logger = { version = "0.25.4", features = ["async"] }
-keccak-hash = "0.10.0"
-log = "0.4.17"
+hex-literal = "0.4.1"
+flexi_logger = { workspace = true }
+keccak-hash = { workspace = true }
+log = { workspace = true }
 rlp = "0.5.2"
 rlp-derive = "0.1.0"
 serde = "1.0.163"
