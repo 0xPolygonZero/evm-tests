@@ -60,6 +60,7 @@ async fn run() -> anyhow::Result<bool> {
         variant_filter,
         skip_passed,
         witness_only,
+        max_cpu_log_len,
         test_timeout,
         blacklist_path,
         simple_progress_indicator,
@@ -144,6 +145,7 @@ async fn run() -> anyhow::Result<bool> {
         &mut persistent_test_state,
         abort_recv,
         witness_only,
+        max_cpu_log_len,
         test_timeout.map(|t| t.into()),
     ) {
         Ok(r) => r,

@@ -9,7 +9,7 @@ use std::{
 use common::types::TestVariantRunInfo;
 use ethereum_types::U256;
 use evm_arithmetization::{
-    prover::testing::{prove_all_segments, simulate_execution},
+    prover::testing::{prove_all_segments, simulate_all_segments_interpreter, simulate_execution},
     verifier::testing::verify_all_proofs,
     AllStark, StarkConfig,
 };
@@ -143,6 +143,7 @@ struct TestRunState<'a> {
     persistent_test_state: &'a mut TestRunEntries,
     process_aborted_recv: ProcessAbortedRecv,
     witness_only: bool,
+    max_cpu_log_len: Option<usize>,
     test_timeout: Duration,
 }
 
@@ -152,6 +153,7 @@ pub(crate) fn run_plonky2_tests(
     persistent_test_state: &mut TestRunEntries,
     process_aborted: ProcessAbortedRecv,
     witness_only: bool,
+    max_cpu_log_len: Option<usize>,
     test_timeout: Option<Duration>,
 ) -> RunnerResult<Vec<TestGroupRunResults>> {
     let num_tests = num_tests_in_groups(parsed_tests.iter());
@@ -167,6 +169,7 @@ pub(crate) fn run_plonky2_tests(
         persistent_test_state,
         process_aborted_recv: process_aborted,
         witness_only,
+        max_cpu_log_len,
         test_timeout,
     };
 
@@ -248,7 +251,9 @@ fn run_test_or_fail_on_timeout(
     t_state: &mut TestRunState,
 ) -> RunnerResult<TestStatus> {
     block_on(async {
-        let proof_gen_fut = async { run_test_and_get_test_result(test, t_state.witness_only) };
+        let proof_gen_fut = async {
+            run_test_and_get_test_result(test, t_state.witness_only, t_state.max_cpu_log_len)
+        };
         let proof_gen_with_timeout_fut = timeout(t_state.test_timeout, proof_gen_fut);
         let process_aborted_fut = t_state.process_aborted_recv.recv();
 
@@ -266,12 +271,20 @@ fn run_test_or_fail_on_timeout(
 }
 
 /// Run a test against `plonky2` and output a result based on what happens.
-fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) -> TestStatus {
+fn run_test_and_get_test_result(
+    test: TestVariantRunInfo,
+    witness_only: bool,
+    max_cpu_log_len: Option<usize>,
+) -> TestStatus {
     let timing = TimingTree::new("prove", log::Level::Debug);
+    let max_cpu_log_len = max_cpu_log_len.unwrap_or(32); // 32 being the default maximum
 
     match witness_only {
         true => {
-            let res = simulate_execution::<GoldilocksField>(test.gen_inputs);
+            let res = simulate_all_segments_interpreter::<GoldilocksField>(
+                test.gen_inputs,
+                max_cpu_log_len,
+            );
 
             if let Err(evm_err) = res {
                 return handle_evm_err(evm_err, false, "witness generation");
@@ -297,7 +310,7 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
                 &AllStark::default(),
                 &StarkConfig::standard_fast_config(),
                 inputs,
-                32,
+                max_cpu_log_len,
                 &mut TimingTree::default(),
                 None,
             );
