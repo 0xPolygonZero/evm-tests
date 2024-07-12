@@ -9,7 +9,7 @@ use std::{
 use common::types::TestVariantRunInfo;
 use ethereum_types::U256;
 use evm_arithmetization::{
-    prover::testing::{prove_all_segments, simulate_all_segments_interpreter, simulate_execution},
+    prover::testing::{prove_all_segments, simulate_all_segments_interpreter},
     verifier::testing::verify_all_proofs,
     AllStark, StarkConfig,
 };
