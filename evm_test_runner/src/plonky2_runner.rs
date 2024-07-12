@@ -9,8 +9,8 @@ use std::{
 use common::types::TestVariantRunInfo;
 use ethereum_types::U256;
 use evm_arithmetization::{
-    prover::{prove, testing::simulate_execution},
-    verifier::verify_proof,
+    prover::testing::{prove_all_segments, simulate_execution},
+    verifier::testing::verify_all_proofs,
     AllStark, StarkConfig,
 };
 use futures::executor::block_on;
@@ -84,11 +84,20 @@ pub(crate) enum TestStatus {
 impl Display for TestStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TestStatus::PassedWitness => write!(f, "Passed witness generation"),
+            TestStatus::PassedWitness => {
+                println!("Passed witness generation",);
+                write!(f, "Passed witness generation")
+            }
             TestStatus::PassedProof => write!(f, "Passed proof verification"),
             TestStatus::Ignored => write!(f, "Ignored"),
-            TestStatus::EvmErr(err) => write!(f, "Evm error: {}", err),
-            TestStatus::TimedOut => write!(f, "Test timed out"),
+            TestStatus::EvmErr(err) => {
+                println!("Evm error {}", err);
+                write!(f, "Evm error: {}", err)
+            }
+            TestStatus::TimedOut => {
+                println!("Test timed out");
+                write!(f, "Test timed out")
+            }
         }
     }
 }
@@ -284,10 +293,11 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
                 inputs.block_metadata.block_gaslimit = U256::from(u32::MAX);
             }
 
-            let proof_run_res = prove::<GoldilocksField, KeccakGoldilocksConfig, 2>(
+            let proof_run_res = prove_all_segments::<GoldilocksField, KeccakGoldilocksConfig, 2>(
                 &AllStark::default(),
                 &StarkConfig::standard_fast_config(),
                 inputs,
+                32,
                 &mut TimingTree::default(),
                 None,
             );
@@ -299,9 +309,9 @@ fn run_test_and_get_test_result(test: TestVariantRunInfo, witness_only: bool) ->
                 Err(evm_err) => return handle_evm_err(evm_err, is_gaslimit_changed, "Proving"),
             };
 
-            let verif_output = verify_proof(
+            let verif_output = verify_all_proofs(
                 &AllStark::default(),
-                proof_run_output,
+                &proof_run_output,
                 &StarkConfig::standard_fast_config(),
             );
             if verif_output.is_err() {
