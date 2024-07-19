@@ -75,10 +75,10 @@ for this altered test, we log it as valid. If it fails, then we flag the test as
 
 ## Coverage [zk_evm v0.4.0]
 
-The results below have been obtained against [zk_evm v0.4.0](https://github.com/0xPolygonZero/zk_evm/releases/tag/v0.4.0).
+The results below have been obtained against [zk_evm v0.6.0](https://github.com/0xPolygonZero/zk_evm/releases/tag/v0.6.0).
 
 All test vectors have been fetched from [ethereum/legacytests](https://github.com/ethereum/legacytests/tree/master) from
-commit [8077d24](https://github.com/ethereum/legacytests/commit/8077d241740de5a448e41156fd33740f562d3b56).
+commit [b2e6c9e](https://github.com/ethereum/legacytests/commit/b2e6c9e43ede7eec9c5b2997c14a892e7eb2f124).
 
 The total number of tests below excludes:
 
@@ -89,7 +89,7 @@ The total number of tests below excludes:
 
 | Total | :white_check_mark: |   :x:  |  Coverage  |
 |:-----:|:------------------:|:------:|:----------:|
-| 14904	|        14896       | 8 [^1] |   99.95%   |
+| 14670	|        14662       | 8 [^1] |   99.95%   |
 
 [^1]: These tests have an impossible initial configuration (i.e. empty accounts with non-empty storage),
 and end up not being provable.
@@ -98,10 +98,11 @@ and end up not being provable.
 
 |           Test Folder Name           | Total | :white_check_mark: | :x: |   Cov   |
 |:------------------------------------:|:-----:|:------------------:|:---:|:------:|
-|               Shanghai               |  26   |         26         |  0  | 100.00 |
+|                Cancun                |  185  |        185         |  0  | 100.00 |
+|               Shanghai               |  23   |         23         |  0  | 100.00 |
 |         stArgsZeroOneBalance         |  96   |         96         |  0  | 100.00 |
 |             stAttackTest             |   2   |         2          |  0  | 100.00 |
-|             stBadOpcode              |  340  |        340         |  0  | 100.00 |
+|             stBadOpcode              |  334  |        334         |  0  | 100.00 |
 |                stBugs                |   9   |         9          |  0  | 100.00 |
 |             stCallCodes              |  86   |         86         |  0  | 100.00 |
 |       stCallCreateCallCodeTest       |  55   |         55         |  0  | 100.00 |
@@ -110,8 +111,8 @@ and end up not being provable.
 |              stChainId               |   2   |         2          |  0  | 100.00 |
 |            stCodeCopyTest            |   2   |         2          |  0  | 100.00 |
 |           stCodeSizeLimit            |   7   |         7          |  0  | 100.00 |
-|              stCreate2               |  184  |        181         |  3  | 98.37  |
-|             stCreateTest             |  204  |        204         |  0  | 100.00 |
+|              stCreate2               |  181  |        178         |  0  | 98.34  |
+|             stCreateTest             |  197  |        197         |  0  | 100.00 |
 |     stDelegatecallTestHomestead      |  31   |         31         |  0  | 100.00 |
 |           stEIP150Specific           |  25   |         25         |  0  | 100.00 |
 |     stEIP150singleCodeGasPrices      |  340  |        340         |  0  | 100.00 |
@@ -130,10 +131,10 @@ and end up not being provable.
 |          stNonZeroCallsTest          |  24   |         24         |  0  | 100.00 |
 |        stPreCompiledContracts        |  956  |        956         |  0  | 100.00 |
 |       stPreCompiledContracts2        |  246  |        246         |  0  | 100.00 |
-|      stQuadraticComplexityTest       |  28   |         28         |  0  | 100.00 |
+|      stQuadraticComplexityTest       |  23   |         23         |  0  | 100.00 |
 |               stRandom               |  310  |        310         |  0  | 100.00 |
 |              stRandom2               |  221  |        221         |  0  | 100.00 |
-|          stRecursiveCreate           |   2   |         2          |  0  | 100.00 |
+|          stRecursiveCreate           |   1   |         1          |  0  | 100.00 |
 |             stRefundTest             |  26   |         26         |  0  | 100.00 |
 |           stReturnDataTest           |  247  |        247         |  0  | 100.00 |
 |             stRevertTest             |  270  |        270         |  0  | 100.00 |
@@ -143,7 +144,7 @@ and end up not being provable.
 |               stShift                |  42   |         42         |  0  | 100.00 |
 |            stSolidityTest            |  23   |         23         |  0  | 100.00 |
 |            stSpecialTest             |  19   |         19         |  0  | 100.00 |
-|             stStackTests             |  375  |        375         |  0  | 100.00 |
+|             stStackTests             |  209  |        209         |  0  | 100.00 |
 |             stStaticCall             |  455  |        455         |  0  | 100.00 |
 |         stStaticFlagEnabled          |  34   |         34         |  0  | 100.00 |
 |        stSystemOperationsTest        |  83   |         83         |  0  | 100.00 |
@@ -154,8 +155,8 @@ and end up not being provable.
 |          stZeroCallsRevert           |  16   |         16         |  0  | 100.00 |
 |           stZeroCallsTest            |  24   |         24         |  0  | 100.00 |
 |           stZeroKnowledge2           |  519  |        519         |  0  | 100.00 |
-|           stZeroKnowledge            |  944  |        944         |  0  | 100.00 |
-|               VMTests                |  649  |        649         |  0  | 100.00 |
+|           stZeroKnowledge            |  800  |        800         |  0  | 100.00 |
+|               VMTests                |  571  |        571         |  0  | 100.00 |
 
 
 ## Other
