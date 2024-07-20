@@ -57,6 +57,7 @@ impl ParsedTestManifest {
                     gas_used_after: t_var.plonky2_metadata.block_metadata.block_gas_used,
                     withdrawals: t_var.plonky2_metadata.withdrawals,
                     block_hashes: BlockHashes::default(),
+                    global_exit_roots: vec![], // not part of Ethereum tests
                 };
 
                 TestVariantRunInfo {
