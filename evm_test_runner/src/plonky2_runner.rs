@@ -84,20 +84,11 @@ pub(crate) enum TestStatus {
 impl Display for TestStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TestStatus::PassedWitness => {
-                println!("Passed witness generation",);
-                write!(f, "Passed witness generation")
-            }
+            TestStatus::PassedWitness => write!(f, "Passed witness generation"),
             TestStatus::PassedProof => write!(f, "Passed proof verification"),
             TestStatus::Ignored => write!(f, "Ignored"),
-            TestStatus::EvmErr(err) => {
-                println!("Evm error {}", err);
-                write!(f, "Evm error: {}", err)
-            }
-            TestStatus::TimedOut => {
-                println!("Test timed out");
-                write!(f, "Test timed out")
-            }
+            TestStatus::EvmErr(err) => write!(f, "Evm error: {}", err),
+            TestStatus::TimedOut => write!(f, "Test timed out"),
         }
     }
 }
