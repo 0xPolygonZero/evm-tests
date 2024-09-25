@@ -350,6 +350,7 @@ dependencies = [
  "evm_arithmetization",
  "flexi_logger",
  "mpt_trie",
+ "plonky2",
  "serde",
 ]
 
@@ -675,6 +676,7 @@ dependencies = [
  "flexi_logger",
  "futures",
  "hex",
+ "hex-literal",
  "keccak-hash 0.10.0",
  "log",
  "mpt_trie",
@@ -716,8 +718,8 @@ dependencies = [
 
 [[package]]
 name = "evm_arithmetization"
-version = "0.2.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm.git?branch=late_hash_continuations#b9b8c5c1903e0636fd10d4d4d06d1287b6742fae"
+version = "0.4.0"
+source = "git+https://github.com/0xPolygonZero/zk_evm.git?branch=develop#56e7d08eb243020e82e228693ee5f8c42d86901e"
 dependencies = [
  "anyhow",
  "bytes",
@@ -744,9 +746,12 @@ dependencies = [
  "serde",
  "serde-big-array",
  "serde_json",
+ "sha2",
  "starky",
  "static_assertions",
+ "thiserror",
  "tiny-keccak",
+ "zk_evm_common",
  "zk_evm_proc_macro",
 ]
 
@@ -1331,8 +1336,8 @@ dependencies = [
 
 [[package]]
 name = "mpt_trie"
-version = "0.3.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm.git?branch=late_hash_continuations#b9b8c5c1903e0636fd10d4d4d06d1287b6742fae"
+version = "0.4.1"
+source = "git+https://github.com/0xPolygonZero/zk_evm.git?branch=develop#56e7d08eb243020e82e228693ee5f8c42d86901e"
 dependencies = [
  "bytes",
  "enum-as-inner",
@@ -1350,6 +1355,7 @@ dependencies = [
  "serde",
  "thiserror",
  "uint",
+ "zk_evm_common",
 ]
 
 [[package]]
@@ -2647,9 +2653,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "zk_evm_common"
+version = "0.1.0"
+source = "git+https://github.com/0xPolygonZero/zk_evm.git?branch=develop#56e7d08eb243020e82e228693ee5f8c42d86901e"
+dependencies = [
+ "ethereum-types",
+ "keccak-hash 0.10.0",
+]
+
+[[package]]
 name = "zk_evm_proc_macro"
 version = "0.1.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm.git?branch=late_hash_continuations#b9b8c5c1903e0636fd10d4d4d06d1287b6742fae"
+source = "git+https://github.com/0xPolygonZero/zk_evm.git?branch=develop#56e7d08eb243020e82e228693ee5f8c42d86901e"
 dependencies = [
  "proc-macro2",
  "quote",

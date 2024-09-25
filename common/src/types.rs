@@ -6,10 +6,14 @@ use std::{
 
 use anyhow::{anyhow, Context};
 use ethereum_types::{Address, H256, U256};
-use evm_arithmetization::proof::{BlockHashes, TrieRoots};
+use evm_arithmetization::{generation::TrieInputs, proof::BlockMetadata};
 use evm_arithmetization::{
-    generation::{GenerationInputs, TrieInputs},
-    proof::BlockMetadata,
+    proof::{BlockHashes, TrieRoots},
+    GenerationInputs,
+};
+use plonky2::{
+    field::{goldilocks_field::GoldilocksField, types::Field},
+    hash::hash_types::NUM_HASH_OUT_ELTS,
 };
 use serde::{Deserialize, Serialize};
 
@@ -57,7 +61,9 @@ impl ParsedTestManifest {
                     gas_used_after: t_var.plonky2_metadata.block_metadata.block_gas_used,
                     withdrawals: t_var.plonky2_metadata.withdrawals,
                     block_hashes: BlockHashes::default(),
-                    global_exit_roots: vec![], // not part of Ethereum tests
+                    ger_data: None,
+                    burn_addr: None,
+                    checkpoint_consolidated_hash: [GoldilocksField::ZERO; NUM_HASH_OUT_ELTS],
                 };
 
                 TestVariantRunInfo {

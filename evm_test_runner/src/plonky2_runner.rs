@@ -9,7 +9,7 @@ use std::{
 use common::types::TestVariantRunInfo;
 use ethereum_types::U256;
 use evm_arithmetization::{
-    prover::testing::{prove_all_segments, simulate_all_segments_interpreter},
+    prover::testing::{prove_all_segments, simulate_execution_all_segments},
     verifier::testing::verify_all_proofs,
     AllStark, StarkConfig,
 };
@@ -281,13 +281,13 @@ fn run_test_and_get_test_result(
 
     match witness_only {
         true => {
-            let res = simulate_all_segments_interpreter::<GoldilocksField>(
+            let res = simulate_execution_all_segments::<GoldilocksField>(
                 test.gen_inputs,
                 max_cpu_log_len,
             );
 
             if let Err(evm_err) = res {
-                return handle_evm_err(evm_err, false, "witness generation");
+                return handle_evm_err(evm_err.into(), false, "witness generation");
             }
 
             return TestStatus::PassedWitness;
