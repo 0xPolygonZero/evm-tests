@@ -14,7 +14,7 @@ keywords = ["cryptography", "SNARK", "PLONK", "FRI", "plonky2"]
 categories = ["cryptography"]
 
 [workspace.dependencies]
-anyhow = { version = "1.0.71", features = ["backtrace"] }
+anyhow = { version = "1.0.86", features = ["backtrace"] }
 clap = {version = "4.2.7", features = ["derive"] }
 ethereum-types = "0.14.1"
 flexi_logger = { version = "0.25.4", features = ["async"] }
