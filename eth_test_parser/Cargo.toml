@@ -15,6 +15,7 @@ categories.workspace = true
 common = { path = "../common" }
 mpt_trie = { workspace = true }
 evm_arithmetization = { workspace = true }
+smt_trie = { workspace = true }
 
 anyhow = { workspace = true }
 bytes = "1.4.0"

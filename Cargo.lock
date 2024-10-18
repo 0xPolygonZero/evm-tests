@@ -686,6 +686,7 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "serde_with",
+ "smt_trie",
  "tokio",
 ]
 
@@ -719,7 +720,6 @@ dependencies = [
 [[package]]
 name = "evm_arithmetization"
 version = "0.4.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm.git?branch=develop#56e7d08eb243020e82e228693ee5f8c42d86901e"
 dependencies = [
  "anyhow",
  "bytes",
@@ -747,6 +747,7 @@ dependencies = [
  "serde-big-array",
  "serde_json",
  "sha2",
+ "smt_trie",
  "starky",
  "static_assertions",
  "thiserror",
@@ -1337,7 +1338,6 @@ dependencies = [
 [[package]]
 name = "mpt_trie"
 version = "0.4.1"
-source = "git+https://github.com/0xPolygonZero/zk_evm.git?branch=develop#56e7d08eb243020e82e228693ee5f8c42d86901e"
 dependencies = [
  "bytes",
  "enum-as-inner",
@@ -2031,6 +2031,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
+name = "smt_trie"
+version = "0.1.1"
+dependencies = [
+ "ethereum-types",
+ "hex-literal",
+ "log",
+ "mpt_trie",
+ "plonky2",
+ "rand",
+ "serde",
+]
+
+[[package]]
 name = "socket2"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2655,7 +2668,6 @@ dependencies = [
 [[package]]
 name = "zk_evm_common"
 version = "0.1.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm.git?branch=develop#56e7d08eb243020e82e228693ee5f8c42d86901e"
 dependencies = [
  "ethereum-types",
  "keccak-hash 0.10.0",
@@ -2664,7 +2676,6 @@ dependencies = [
 [[package]]
 name = "zk_evm_proc_macro"
 version = "0.1.0"
-source = "git+https://github.com/0xPolygonZero/zk_evm.git?branch=develop#56e7d08eb243020e82e228693ee5f8c42d86901e"
 dependencies = [
  "proc-macro2",
  "quote",

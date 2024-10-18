@@ -119,7 +119,7 @@ pub struct ExpectedFinalRoots {
 pub struct TestMetadata {
     pub tries: TrieInputs,
     pub genesis_state_root: H256,
-    pub contract_code: HashMap<H256, Vec<u8>>,
+    pub contract_code: HashMap<U256, Vec<u8>>,
     pub block_metadata: BlockMetadata,
     pub withdrawals: Vec<(Address, U256)>,
 }

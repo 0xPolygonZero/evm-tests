@@ -12,7 +12,7 @@ use common::{
     config::ETHEREUM_CHAIN_ID,
     types::{ExpectedFinalRoots, Plonky2ParsedTest, TestMetadata},
 };
-use ethereum_types::{H160, H256, U256};
+use ethereum_types::{Address, BigEndianHash, H160, H256, U256};
 use evm_arithmetization::{generation::TrieInputs, proof::BlockMetadata};
 use keccak_hash::keccak;
 use mpt_trie::{
@@ -20,6 +20,7 @@ use mpt_trie::{
     partial_trie::{HashedPartialTrie, PartialTrie},
     utils::TryFromIterator,
 };
+use smt_trie::{code::hash_bytecode_u256, db::{Db, MemoryDb}, keys::{key_balance, key_code, key_code_length, key_nonce, key_storage}, smt::Smt, utils::hashout2u};
 use rlp::Encodable;
 use rlp_derive::{RlpDecodable, RlpEncodable};
 
@@ -27,10 +28,10 @@ use crate::deserialize::{Block, PreAccount, TestBody};
 
 #[derive(RlpDecodable, RlpEncodable)]
 pub(crate) struct AccountRlp {
-    nonce: u64,
+    nonce: U256,
     balance: U256,
-    storage_hash: H256,
-    code_hash: H256,
+    code_hash: U256,
+    code_length: U256,
 }
 
 impl Block {
@@ -64,26 +65,24 @@ impl TestBody {
     pub fn as_plonky2_test_inputs(&self) -> Plonky2ParsedTest {
         let block = &self.block;
 
-        let storage_tries = self.get_storage_tries(&self.pre);
-        let state_trie = self.get_state_trie(&self.pre, &storage_tries);
-
-        let final_storage_tries = self.get_storage_tries(&self.post);
-        let final_state_trie = self.get_state_trie(&self.post, &final_storage_tries);
+        let state_smt = Self::get_state_smt(self.pre.iter());
 
         let tries = TrieInputs {
-            state_trie,
+            state_trie: state_smt,
             transactions_trie: HashedPartialTrie::default(),
             receipts_trie: HashedPartialTrie::default(),
-            storage_tries,
         };
 
         let contract_code: HashMap<_, _> = self
             .pre
             .values()
-            .map(|pre| (hash(&pre.code.0), pre.code.0.clone()))
+            .map(|pre| (hash_bytecode_u256(pre.code.0.clone()), pre.code.0.clone()))
             .collect();
 
-        let header = &block.block_header;
+            let header = &block.block_header;
+
+            let post_state_smt = Self::get_state_smt(self.post.iter());
+    
 
         let plonky2_metadata = TestMetadata {
             tries,
@@ -101,7 +100,7 @@ impl TestBody {
             test_name: self.name.clone(),
             txn_bytes: self.get_txn_bytes(),
             final_roots: ExpectedFinalRoots {
-                state_root_hash: final_state_trie.hash(),
+                state_root_hash: H256::from_uint(&hashout2u(post_state_smt.root)),
                 txn_trie_root_hash: header.transactions_trie,
                 receipts_trie_root_hash: header.receipt_trie,
             },
@@ -109,53 +108,31 @@ impl TestBody {
         }
     }
 
-    fn get_storage_tries(
-        &self,
-        accounts: &HashMap<H160, PreAccount>,
-    ) -> Vec<(H256, HashedPartialTrie)> {
-        accounts
-            .iter()
-            .map(|(acc_key, pre_acc)| {
-                let storage_trie = HashedPartialTrie::try_from_iter(
-                    pre_acc
-                        .storage
-                        .iter()
-                        .filter(|(_, v)| !v.is_zero())
-                        .map(|(k, v)| {
-                            (
-                                Nibbles::from_h256_be(hash(&u256_to_be_bytes(*k))),
-                                v.rlp_bytes().to_vec(),
-                            )
-                        }),
-                )
-                .unwrap();
+    fn get_state_smt<'a, I>(accounts: I) -> Smt<MemoryDb>
+    where
+        I: IntoIterator<Item = (&'a H160, &'a PreAccount)>,
+    {
+        let mut smt = Smt::<MemoryDb>::default();
+        for (acc_key, pre_acc) in accounts {
+            let code_hash = hash_bytecode_u256(pre_acc.code.0.clone());
+            let storage = pre_acc
+                .storage
+                .iter()
+                .filter(|(_, v)| !v.is_zero())
+                .map(|(k, v)| (*k, *v))
+                .collect();
 
-                (hash(acc_key.as_bytes()), storage_trie)
-            })
-            .collect()
-    }
-
-    fn get_state_trie(
-        &self,
-        accounts: &HashMap<H160, PreAccount>,
-        storage_tries: &[(H256, HashedPartialTrie)],
-    ) -> HashedPartialTrie {
-        HashedPartialTrie::try_from_iter(accounts.iter().map(|(acc_key, pre_acc)| {
-            let addr_hash = hash(acc_key.as_bytes());
-            let code_hash = hash(&pre_acc.code.0);
-            let storage_hash = get_storage_hash(&addr_hash, storage_tries);
-
-            let rlp = AccountRlp {
-                nonce: pre_acc.nonce,
+            let account = AccountRlp {
+                nonce: pre_acc.nonce.into(),
                 balance: pre_acc.balance,
-                storage_hash,
                 code_hash,
-            }
-            .rlp_bytes();
+                code_length: pre_acc.code.0.len().into(),
+            };
 
-            (Nibbles::from_h256_be(addr_hash), rlp.to_vec())
-        }))
-        .unwrap()
+            set_account(&mut smt, *acc_key, &account, &storage);
+        }
+
+        smt
     }
 
     pub(crate) fn get_txn_bytes(&self) -> Vec<u8> {
@@ -169,24 +146,17 @@ impl From<TestBody> for Plonky2ParsedTest {
     }
 }
 
-fn get_storage_hash(
-    hashed_account_address: &H256,
-    storage_tries: &[(H256, HashedPartialTrie)],
-) -> H256 {
-    storage_tries
-        .iter()
-        .find(|(addr, _)| hashed_account_address == addr)
-        .unwrap()
-        .1
-        .hash()
-}
-
-fn u256_to_be_bytes(x: U256) -> [u8; 32] {
-    let mut bytes = [0; 32];
-    x.to_big_endian(&mut bytes);
-    bytes
-}
-
-fn hash(bytes: &[u8]) -> H256 {
-    H256::from(keccak(bytes).0)
+fn set_account<D: Db>(
+    smt: &mut Smt<D>,
+    addr: Address,
+    account: &AccountRlp,
+    storage: &HashMap<U256, U256>,
+) {
+    smt.set(key_balance(addr), account.balance);
+    smt.set(key_nonce(addr), account.nonce);
+    smt.set(key_code(addr), account.code_hash);
+    smt.set(key_code_length(addr), account.code_length);
+    for (&k, &v) in storage {
+        smt.set(key_storage(addr, k), v);
+    }
 }

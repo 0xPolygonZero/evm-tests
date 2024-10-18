@@ -27,8 +27,10 @@ tokio = { version = "1.28.1" }
 
 # zk-evm dependencies
 plonky2 = { git = "https://github.com/0xPolygonZero/plonky2.git", rev = "dc77c77f2b06500e16ad4d7f1c2b057903602eed" }
-mpt_trie = { git = "https://github.com/0xPolygonZero/zk_evm.git", branch = "develop"}
-evm_arithmetization = { git = "https://github.com/0xPolygonZero/zk_evm.git", branch = "develop" }
+mpt_trie = { path = "../zk_evm/mpt_trie"}
+smt_trie = { path = "../zk_evm/smt_trie"}
+
+evm_arithmetization = { path = "../zk_evm/evm_arithmetization"}
 
 [profile.release]
 opt-level = 3
