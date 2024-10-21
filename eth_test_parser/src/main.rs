@@ -48,13 +48,7 @@ async fn run(ProgArgs { no_fetch, out_path }: ProgArgs) -> anyhow::Result<()> {
                 let test_manifest = ParsedTestManifest {
                     plonky2_variants: test_bodies
                         .iter()
-                        .filter_map(|t| {
-                            if t.name.contains("sloadGasCost") {
-                                println!("viva la tabla");
-                                return Some(t.as_plonky2_test_inputs())
-                            }
-                            None
-                        })
+                        .map(|t| t.as_plonky2_test_inputs())
                         .collect(),
                 };
 

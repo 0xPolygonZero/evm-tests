@@ -13,7 +13,9 @@ use common::{
     types::{ExpectedFinalRoots, Plonky2ParsedTest, TestMetadata},
 };
 use ethereum_types::{Address, BigEndianHash, H160, H256, U256};
-use evm_arithmetization::{generation::TrieInputs, proof::BlockMetadata};
+use evm_arithmetization::{
+    generation::TrieInputs, proof::BlockMetadata, testing_utils::BEACON_ROOTS_CONTRACT_ADDRESS,
+};
 use keccak_hash::keccak;
 use mpt_trie::{
     nibbles::Nibbles,
@@ -73,7 +75,7 @@ impl TestBody {
 
         let state_smt = Self::get_state_smt(self.pre.iter());
 
-        println!("pre state smt = {}", state_smt);
+        // println!("pre state smt = {}", state_smt);
 
         let tries = TrieInputs {
             state_trie: state_smt,
@@ -90,8 +92,8 @@ impl TestBody {
         let header = &block.block_header;
 
         let post_state_smt = Self::get_state_smt(self.post.iter());
-        
-        println!("post state smt = {}", post_state_smt);
+
+        // println!("post state smt = {}", post_state_smt);
 
         let plonky2_metadata = TestMetadata {
             tries,
@@ -122,7 +124,10 @@ impl TestBody {
         I: IntoIterator<Item = (&'a H160, &'a PreAccount)>,
     {
         let mut smt = Smt::<MemoryDb>::default();
-        for (acc_key, pre_acc) in accounts {
+        for (acc_key, pre_acc) in accounts
+            .into_iter()
+            .filter(|&(&acc_key, _)| acc_key != BEACON_ROOTS_CONTRACT_ADDRESS) // We don't want beacon roots on cdk_erigon
+        {
             let code_hash = hash_bytecode_u256(pre_acc.code.0.clone());
             let storage = pre_acc
                 .storage
