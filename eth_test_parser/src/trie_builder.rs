@@ -20,9 +20,15 @@ use mpt_trie::{
     partial_trie::{HashedPartialTrie, PartialTrie},
     utils::TryFromIterator,
 };
-use smt_trie::{code::hash_bytecode_u256, db::{Db, MemoryDb}, keys::{key_balance, key_code, key_code_length, key_nonce, key_storage}, smt::Smt, utils::hashout2u};
 use rlp::Encodable;
 use rlp_derive::{RlpDecodable, RlpEncodable};
+use smt_trie::{
+    code::hash_bytecode_u256,
+    db::{Db, MemoryDb},
+    keys::{key_balance, key_code, key_code_length, key_nonce, key_storage},
+    smt::Smt,
+    utils::hashout2u,
+};
 
 use crate::deserialize::{Block, PreAccount, TestBody};
 
@@ -67,6 +73,8 @@ impl TestBody {
 
         let state_smt = Self::get_state_smt(self.pre.iter());
 
+        println!("pre state smt = {}", state_smt);
+
         let tries = TrieInputs {
             state_trie: state_smt,
             transactions_trie: HashedPartialTrie::default(),
@@ -79,10 +87,11 @@ impl TestBody {
             .map(|pre| (hash_bytecode_u256(pre.code.0.clone()), pre.code.0.clone()))
             .collect();
 
-            let header = &block.block_header;
+        let header = &block.block_header;
 
-            let post_state_smt = Self::get_state_smt(self.post.iter());
-    
+        let post_state_smt = Self::get_state_smt(self.post.iter());
+        
+        println!("post state smt = {}", post_state_smt);
 
         let plonky2_metadata = TestMetadata {
             tries,
