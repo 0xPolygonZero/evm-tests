@@ -94,7 +94,7 @@ impl TestBody {
         let post_state_smt = Self::get_state_smt(self.post.iter());
 
         // println!("post state smt = {}", post_state_smt);
-
+        // println!("post state smt hash = {:?}", H256::from_uint(&hashout2u(post_state_smt.root)));
         let plonky2_metadata = TestMetadata {
             tries,
             contract_code,

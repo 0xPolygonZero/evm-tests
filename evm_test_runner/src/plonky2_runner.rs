@@ -272,10 +272,12 @@ fn run_test_and_get_test_result(
 
     match witness_only {
         true => {
+            println!("proving {:?}", test.variant_name);
             let res = simulate_execution_all_segments::<GoldilocksField>(
                 test.gen_inputs,
                 max_cpu_log_len,
             );
+            println!("proved {:?}", test.variant_name);
 
             if let Err(evm_err) = res {
                 return handle_evm_err(evm_err.into(), false, "witness generation");
