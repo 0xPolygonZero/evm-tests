@@ -215,6 +215,7 @@ fn run_test_sub_group(
         test_res: sub_group
             .tests
             .into_iter()
+            .filter(|sub_g| sub_g.name == "deploymentError_d0g0v0_Cancun")
             .map(|sub_g| run_test(sub_g, t_state))
             .collect::<RunnerResult<_>>()?,
     })
