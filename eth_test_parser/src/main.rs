@@ -50,7 +50,7 @@ async fn run(ProgArgs { no_fetch, out_path }: ProgArgs) -> anyhow::Result<()> {
                         .iter()
                         // .filter(|t| {
                         //     t.name.contains(
-                        //         "deploymentError_d0g0v0_Cancun",
+                        //         "eoaEmptyParis_d1g1v0_Cancun",
                         //     )
                         // })
                         .map(|t| {

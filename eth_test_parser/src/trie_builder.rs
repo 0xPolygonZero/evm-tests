@@ -170,7 +170,7 @@ fn set_account<D: Db>(
 ) {
     smt.set(key_balance(addr), account.balance);
     smt.set(key_nonce(addr), account.nonce);
-    println!("addr {:?}, setting {:?} to {:?}", addr, key_code(addr), account.code_hash);
+    // println!("addr {:?}, setting {:?} to {:?}", addr, key_code(addr), account.code_hash);
     smt.set(key_code(addr), account.code_hash);
     smt.set(key_code_length(addr), account.code_length);
     for (&k, &v) in storage {
