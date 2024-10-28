@@ -48,11 +48,11 @@ async fn run(ProgArgs { no_fetch, out_path }: ProgArgs) -> anyhow::Result<()> {
                 let test_manifest = ParsedTestManifest {
                     plonky2_variants: test_bodies
                         .iter()
-                        .filter(|t| {
-                            t.name.contains(
-                                "deploymentError_d0g0v0_Cancun",
-                            )
-                        })
+                        // .filter(|t| {
+                        //     t.name.contains(
+                        //         "deploymentError_d0g0v0_Cancun",
+                        //     )
+                        // })
                         .map(|t| {
                             // println!("{:?}", t.name);
                             t.as_plonky2_test_inputs()
