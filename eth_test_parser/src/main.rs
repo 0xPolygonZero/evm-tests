@@ -50,7 +50,7 @@ async fn run(ProgArgs { no_fetch, out_path }: ProgArgs) -> anyhow::Result<()> {
                         .iter()
                         // .filter(|t| {
                         //     t.name.contains(
-                        //         "eoaEmptyParis_d1g1v0_Cancun",
+                        //         "TouchToEmptyAccountRevert3_Paris_d0g0v0_Cancun",
                         //     )
                         // })
                         .map(|t| {
