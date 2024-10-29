@@ -92,3 +92,6 @@ eoaEmptyParis_d1g1v0_Cancun
 createLargeResult_d1g0v0_Cancun
 badOpcodes_d25g0v0_Cancun
 badOpcodes_d24g0v0_Cancun
+invalidAddr_d36g0v0_Cancun
+InitCollisionParis_d2g0v0_Cancun
+jump_d9g0v0_Cancun

@@ -215,7 +215,7 @@ fn run_test_sub_group(
         test_res: sub_group
             .tests
             .into_iter()
-            .filter(|sub_g| sub_g.name == "invalidAddr_d36g0v0_Cancun")
+            .filter(|sub_g| sub_g.name == "jump_d9g0v0_Cancun")
             .map(|sub_g| run_test(sub_g, t_state))
             .collect::<RunnerResult<_>>()?,
     })
