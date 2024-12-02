@@ -73,9 +73,9 @@ would not be provable anyway. For tests that have an acceptable transaction `gas
 alter the latter to be `0xFFFFFFFF` (i.e. the maximum value fitting in a `u32`). If the runner manages to generate a valid witness / proof
 for this altered test, we log it as valid. If it fails, then we flag the test as ignored.
 
-## Coverage [zk_evm v0.4.0]
+## Coverage [zk_evm v0.7.0]
 
-The results below have been obtained against [zk_evm v0.6.0](https://github.com/0xPolygonZero/zk_evm/releases/tag/v0.6.0).
+The results below have been obtained against [zk_evm v0.7.0](https://github.com/0xPolygonZero/zk_evm/releases/tag/v0.7.0).
 
 All test vectors have been fetched from [ethereum/legacytests](https://github.com/ethereum/legacytests/tree/master) from
 commit [b2e6c9e](https://github.com/ethereum/legacytests/commit/b2e6c9e43ede7eec9c5b2997c14a892e7eb2f124).
