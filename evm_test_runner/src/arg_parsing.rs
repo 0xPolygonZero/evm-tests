@@ -40,6 +40,10 @@ pub(crate) struct ProgArgs {
     #[arg(short = 'f', long)]
     pub(crate) test_filter: Option<String>,
 
+    /// An optional max CPU log length for each segment to be generated.
+    #[arg(short = 'c', long)]
+    pub(crate) max_cpu_log_len: Option<usize>,
+
     /// Do not run tests that have already passed in the past or that are
     /// ignored.
     #[arg(short = 'p', long)]

@@ -114,7 +114,7 @@ pub(crate) enum PassState {
 
 impl PassState {
     // Utility method to filter out passed tests from previous runs.
-    fn get_passed_status(&self, witness_only: bool) -> bool {
+    const fn get_passed_status(&self, witness_only: bool) -> bool {
         if witness_only {
             matches!(
                 self,
