@@ -94,7 +94,7 @@ impl Display for TestStatus {
 }
 
 impl TestStatus {
-    pub(crate) fn passed(&self) -> bool {
+    pub(crate) const fn passed(&self) -> bool {
         matches!(self, Self::PassedProof | Self::PassedWitness)
     }
 }

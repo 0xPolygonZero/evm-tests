@@ -157,14 +157,14 @@ async fn parse_test_sub_group(
 }
 
 fn blacklisted(blacklist: Option<&HashSet<String>>, t_name: &str) -> bool {
-    blacklist.map_or(false, |b_list| b_list.contains(t_name))
+    blacklist.is_some_and(|b_list| b_list.contains(t_name))
 }
 
 fn test_is_not_in_filter_str(filter_str: &Option<String>, file_path: &Path) -> bool {
-    filter_str.as_ref().map_or(false, |f_str| {
+    filter_str.as_ref().is_some_and(|f_str| {
         file_path
             .to_str()
-            .map_or(false, |p_str| !p_str.contains(f_str))
+            .is_some_and(|p_str| !p_str.contains(f_str))
     })
 }
 

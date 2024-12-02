@@ -112,6 +112,7 @@ pub(crate) fn prepare_output_dir(out_path: &Path) -> Result<()> {
 
 /// Generate an iterator containing the deserialized test bodies (`TestBody`)
 /// and their `DirEntry`s.
+#[allow(clippy::type_complexity)]
 pub(crate) fn get_deserialized_test_bodies(
 ) -> Result<impl Iterator<Item = Result<(DirEntry, Vec<TestBody>), (String, String)>>> {
     Ok(get_test_files()?.map(|entry| {
